@@ -3,158 +3,87 @@ import { buildEvaluatorPrompt, type RawEvaluation } from "@/lib/evaluator-prompt
 import type { MarketContext } from "@/lib/types";
 
 /**
- * Google Gemini 1.5 Flash provider — free tier (15 req/min, 1,500/day).
+ * Google Gemini provider — uses the free tier of Gemini 2.0 Flash Lite
+ * (or falls back to 1.5 Flash). Native JSON response schema constrains
+ * output to our RawEvaluation shape.
  *
- * Uses Gemini's native `responseMimeType: "application/json"` + a
- * `responseSchema` so the model is constrained to emit valid JSON matching
- * our RawEvaluation shape. This is far more reliable than prompt-only JSON.
- *
- * Requires env var: GEMINI_API_KEY (get a free key at
- * https://aistudio.google.com/apikey)
+ * Requires env var: GEMINI_API_KEY (free key from https://aistudio.google.com/apikey)
  */
+const MODEL_CANDIDATES = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-flash-latest",
+];
+
 export class GeminiProvider implements VisionProvider {
-  name = "gemini-1.5-flash";
+  name = "gemini-flash";
 
   async evaluate(image: string, market: MarketContext): Promise<RawEvaluation> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error(
-        "GEMINI_API_KEY env var is required for the Gemini provider. Get a free key at https://aistudio.google.com/apikey"
+        "GEMINI_API_KEY env var is required for the Gemini provider."
       );
     }
 
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        // Constrain output to our schema — Gemini will only emit valid JSON
-        // matching this shape. Arrays use the item schema; mixed arrays of
-        // strings are modelled as string arrays with a description.
-        responseSchema: {
-          type: "object",
-          properties: {
-            technical: {
-              type: "object",
-              properties: {
-                exposure: { type: "number" },
-                eye_focus: { type: "number" },
-                noise: { type: "number" },
-                color_balance: { type: "number" },
-                dynamic_range: { type: "number" },
-                flags: { type: "array", items: { type: "string" } },
-              },
-              required: [
-                "exposure",
-                "eye_focus",
-                "noise",
-                "color_balance",
-                "dynamic_range",
-                "flags",
-              ],
-            },
-            aesthetic_market: {
-              type: "object",
-              properties: {
-                composition: { type: "number" },
-                background_cleanliness: { type: "number" },
-                expression_fit: { type: "number" },
-                wardrobe_fit: { type: "number" },
-                believability: { type: "number" },
-                flags: { type: "array", items: { type: "string" } },
-              },
-              required: [
-                "composition",
-                "background_cleanliness",
-                "expression_fit",
-                "wardrobe_fit",
-                "believability",
-                "flags",
-              ],
-            },
-            casting: {
-              type: "object",
-              properties: {
-                apparent_age_range: {
-                  type: "array",
-                  items: { type: "integer" },
-                },
-                gender_presentation: {
-                  type: "object",
-                  properties: {
-                    label: { type: "string" },
-                    confidence: { type: "number" },
-                  },
-                  required: ["label", "confidence"],
-                },
-                type_labels: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      label: { type: "string" },
-                      score: { type: "number" },
-                    },
-                    required: ["label", "score"],
-                  },
-                },
-                expression_readability: { type: "number" },
-                expression_tags: { type: "array", items: { type: "string" } },
-              },
-              required: [
-                "apparent_age_range",
-                "gender_presentation",
-                "type_labels",
-                "expression_readability",
-                "expression_tags",
-              ],
-            },
-            confidence: { type: "number" },
-            narrative: { type: "array", items: { type: "string" } },
-          },
-          required: [
-            "technical",
-            "aesthetic_market",
-            "casting",
-            "confidence",
-            "narrative",
-          ],
-        },
-        temperature: 0.4,
-      },
-    });
-
     const prompt = buildEvaluatorPrompt(market);
     const imageData = await this.extractImageData(image);
 
-    const result = await model.generateContent([
-      { text: prompt },
-      {
-        inlineData: {
-          mimeType: imageData.mimeType,
-          data: imageData.data,
-        },
-      },
-    ]);
+    const responseSchema = this.buildSchema();
+    let lastError: unknown = null;
 
-    const text = result.response.text();
-    const parsed = JSON.parse(text);
-    return this.coerce(parsed);
+    for (const modelName of MODEL_CANDIDATES) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema,
+            temperature: 0.4,
+          },
+        });
+
+        const result = await model.generateContent([
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: imageData.mimeType,
+              data: imageData.data,
+            },
+          },
+        ]);
+
+        const text = result.response.text();
+        const parsed = JSON.parse(text);
+        this.name = modelName;
+        return this.coerce(parsed);
+      } catch (err) {
+        lastError = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        // 404 = model not found, try next. 429 = quota, try next.
+        // Other errors (network, auth) — also try next, we'll surface the last.
+        if (msg.includes("404") || msg.includes("429")) continue;
+        // For other errors, stop and throw.
+        throw err;
+      }
+    }
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("All Gemini model candidates failed");
   }
 
-  /** Extract base64 data + mime type from a data URL or fetch a remote URL. */
   private async extractImageData(
     image: string
   ): Promise<{ mimeType: string; data: string }> {
-    // Data URL: data:image/jpeg;base64,....
     const dataUrlMatch = image.match(
       /^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/
     );
     if (dataUrlMatch) {
       return { mimeType: dataUrlMatch[1], data: dataUrlMatch[2] };
     }
-    // Remote URL — Gemini's inlineData needs base64, so fetch + convert.
     const res = await fetch(image);
     if (!res.ok) {
       throw new Error(`Failed to fetch image: HTTP ${res.status}`);
@@ -164,12 +93,72 @@ export class GeminiProvider implements VisionProvider {
     return { mimeType, data: buf.toString("base64") };
   }
 
+  private buildSchema(): object {
+    return {
+      type: "object",
+      properties: {
+        technical: {
+          type: "object",
+          properties: {
+            exposure: { type: "number" },
+            eye_focus: { type: "number" },
+            noise: { type: "number" },
+            color_balance: { type: "number" },
+            dynamic_range: { type: "number" },
+            flags: { type: "array", items: { type: "string" } },
+          },
+          required: ["exposure", "eye_focus", "noise", "color_balance", "dynamic_range", "flags"],
+        },
+        aesthetic_market: {
+          type: "object",
+          properties: {
+            composition: { type: "number" },
+            background_cleanliness: { type: "number" },
+            expression_fit: { type: "number" },
+            wardrobe_fit: { type: "number" },
+            believability: { type: "number" },
+            flags: { type: "array", items: { type: "string" } },
+          },
+          required: ["composition", "background_cleanliness", "expression_fit", "wardrobe_fit", "believability", "flags"],
+        },
+        casting: {
+          type: "object",
+          properties: {
+            apparent_age_range: { type: "array", items: { type: "integer" } },
+            gender_presentation: {
+              type: "object",
+              properties: {
+                label: { type: "string" },
+                confidence: { type: "number" },
+              },
+              required: ["label", "confidence"],
+            },
+            type_labels: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  label: { type: "string" },
+                  score: { type: "number" },
+                },
+                required: ["label", "score"],
+              },
+            },
+            expression_readability: { type: "number" },
+            expression_tags: { type: "array", items: { type: "string" } },
+          },
+          required: ["apparent_age_range", "gender_presentation", "type_labels", "expression_readability", "expression_tags"],
+        },
+        confidence: { type: "number" },
+        narrative: { type: "array", items: { type: "string" } },
+      },
+      required: ["technical", "aesthetic_market", "casting", "confidence", "narrative"],
+    };
+  }
+
   private coerce(obj: unknown): RawEvaluation {
-    // Gemini's responseSchema already constrains the shape, but we still
-    // validate/clamp to be safe (matching the ZAI provider's coerce logic).
     const o = (obj ?? {}) as Record<string, unknown>;
-    const clamp01 = (x: unknown) =>
-      Math.max(0, Math.min(1, Number(x) || 0));
+    const clamp01 = (x: unknown) => Math.max(0, Math.min(1, Number(x) || 0));
     const toFlags = (v: unknown): string[] =>
       Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : [];
 
