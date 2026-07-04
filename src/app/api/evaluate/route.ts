@@ -9,9 +9,12 @@ import {
 } from "@/lib/evaluator-prompt";
 import type { HeadshotEvaluation, MarketContext } from "@/lib/types";
 import { db } from "@/lib/db";
+import { ensureZaiConfig } from "@/lib/zai-init";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// Vercel Hobby caps at 60s; Pro allows up to 300s. Evaluations take ~20s;
+// 429-retry backoff can add ~13s. 60s covers the common case.
+export const maxDuration = 60;
 
 const VALID_MARKETS: MarketContext[] = [
   "us_commercial",
@@ -182,6 +185,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    ensureZaiConfig();
     const zai = await ZAI.create();
     const prompt = buildEvaluatorPrompt(market);
 

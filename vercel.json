@@ -1,0 +1,8 @@
+{
+  "buildCommand": "prisma generate && next build",
+  "functions": {
+    "src/app/api/evaluate/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
