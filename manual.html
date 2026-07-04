@@ -5,13 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Spotlight Review — User Manual</title>
 <style>
-  /* ── Fonts ── */
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&display=swap');
 
-  /* ── Page Setup ── */
+  /* ── Page Setup: Paged.js handles pagination ── */
   @page {
     size: A4;
+    margin: 22mm 20mm 18mm 20mm;
+    @bottom-left {
+      content: "Spotlight Review · User Manual";
+      font-family: 'Inter', sans-serif;
+      font-size: 8pt;
+      color: #7a6e60;
+    }
+    @bottom-right {
+      content: counter(page);
+      font-family: 'Inter', sans-serif;
+      font-size: 8pt;
+      color: #7a6e60;
+      font-weight: 500;
+    }
+  }
+  /* Cover page: no margins, no footer */
+  @page cover {
     margin: 0;
+    @bottom-left { content: none; }
+    @bottom-right { content: none; }
   }
 
   :root {
@@ -41,23 +59,11 @@
     print-color-adjust: exact;
   }
 
-  /* ── Page Container ── */
-  .page {
-    width: 210mm;
-    min-height: 297mm;
-    padding: 22mm 20mm 20mm 20mm;
-    box-sizing: border-box;
-    page-break-after: always;
-    position: relative;
-    background: var(--paper);
-  }
-  .page:last-child {
-    page-break-after: auto;
-  }
-
-  /* ── Cover Page ── */
+  /* ── Cover Page (fixed, full-bleed) ── */
   .cover {
-    padding: 0;
+    page: cover;
+    width: 210mm;
+    height: 297mm;
     background: linear-gradient(155deg, #1a1510 0%, #2a2017 40%, #3a2d1e 100%);
     color: var(--cream);
     display: flex;
@@ -65,6 +71,8 @@
     justify-content: space-between;
     overflow: hidden;
     position: relative;
+    box-sizing: border-box;
+    break-after: page;
   }
   .cover::before {
     content: "";
@@ -149,6 +157,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    margin-top: 8mm;
   }
   .cover-tag {
     padding: 4px 12px;
@@ -168,14 +177,30 @@
     font-size: 9pt;
     color: rgba(250,246,239,0.5);
   }
-  .cover-version {
-    font-family: 'Inter', sans-serif;
-    font-weight: 400;
-    letter-spacing: 0.05em;
-  }
   .cover-version strong {
     color: var(--spotlight-light);
     font-weight: 600;
+  }
+
+  /* ── Content sections: flow naturally, NO forced section breaks ── */
+  /* Content packs tightly — Paged.js fills every page. Section headers
+     use break-after: avoid so they stay with their following content. */
+  .section {
+    break-before: auto;
+  }
+
+  .section-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5mm;
+    margin-bottom: 6mm;
+  }
+  .section-lead {
+    font-size: 11.5pt;
+    color: var(--muted);
+    font-style: italic;
+    font-family: 'Source Serif 4', serif;
+    margin: 3mm 0 0 0;
+    line-height: 1.5;
   }
 
   /* ── Typography ── */
@@ -183,7 +208,7 @@
     font-family: 'Source Serif 4', Georgia, serif;
     color: var(--espresso);
     line-height: 1.25;
-    page-break-after: avoid;
+    break-after: avoid;
   }
   h1.section-title {
     font-size: 26pt;
@@ -206,30 +231,23 @@
     font-weight: 600;
     margin: 8mm 0 3mm 0;
     color: var(--espresso);
+    break-after: avoid;
   }
   h3 {
     font-size: 12pt;
     font-weight: 600;
     margin: 6mm 0 2mm 0;
     color: var(--espresso);
+    break-after: avoid;
   }
   p {
     margin: 0 0 3.5mm 0;
     text-align: justify;
     hyphens: auto;
   }
-  strong {
-    font-weight: 600;
-    color: var(--espresso);
-  }
-  em {
-    color: var(--spotlight);
-    font-style: italic;
-  }
-  a {
-    color: var(--spotlight);
-    text-decoration: none;
-  }
+  strong { font-weight: 600; color: var(--espresso); }
+  em { color: var(--spotlight); font-style: italic; }
+  a { color: var(--spotlight); text-decoration: none; }
   code {
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 9.5pt;
@@ -239,91 +257,42 @@
     border-radius: 3px;
   }
 
-  /* ── Section Header Block ── */
-  .section-header {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 5mm;
-    margin-bottom: 6mm;
-    page-break-after: avoid;
-  }
-  .section-lead {
-    font-size: 11.5pt;
-    color: var(--muted);
-    font-style: italic;
-    font-family: 'Source Serif 4', serif;
-    margin: 3mm 0 0 0;
-    line-height: 1.5;
-  }
-
-  /* ── Page Footer ── */
-  .page-footer {
-    position: absolute;
-    bottom: 10mm;
-    left: 20mm;
-    right: 20mm;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 8pt;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    padding-top: 4mm;
-  }
-  .page-footer-left {
-    letter-spacing: 0.05em;
-  }
-  .page-footer-right {
-    font-weight: 500;
-  }
-
-  /* ── Components ── */
-  .callout {
-    background: var(--spotlight-pale);
-    border-left: 3px solid var(--spotlight);
+  /* ── Callout boxes (keep together) ── */
+  .callout, .ethics-box, .warn-box {
     padding: 5mm 6mm;
     margin: 5mm 0;
     border-radius: 0 6px 6px 0;
-    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .callout {
+    background: var(--spotlight-pale);
+    border-left: 3px solid var(--spotlight);
+  }
+  .ethics-box {
+    background: #f0f5f0;
+    border-left: 3px solid var(--emerald);
+  }
+  .warn-box {
+    background: #fdf0f0;
+    border-left: 3px solid var(--rose);
   }
   .callout-title {
     font-weight: 600;
     font-size: 10pt;
-    color: var(--spotlight);
     margin: 0 0 2mm 0;
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  .callout p {
+  .callout .callout-title { color: var(--spotlight); }
+  .ethics-box .callout-title { color: var(--emerald); }
+  .warn-box .callout-title { color: var(--rose); }
+  .callout p, .ethics-box p, .warn-box p {
     margin: 0;
     font-size: 10pt;
     color: var(--espresso);
   }
 
-  .ethics-box {
-    background: #f0f5f0;
-    border-left: 3px solid var(--emerald);
-    padding: 5mm 6mm;
-    margin: 5mm 0;
-    border-radius: 0 6px 6px 0;
-    page-break-inside: avoid;
-  }
-  .ethics-box .callout-title {
-    color: var(--emerald);
-  }
-
-  .warn-box {
-    background: #fdf0f0;
-    border-left: 3px solid var(--rose);
-    padding: 5mm 6mm;
-    margin: 5mm 0;
-    border-radius: 0 6px 6px 0;
-    page-break-inside: avoid;
-  }
-  .warn-box .callout-title {
-    color: var(--rose);
-  }
-
-  /* ── Feature Cards ── */
+  /* ── Feature cards (keep together in pairs) ── */
   .feature-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -335,7 +304,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 5mm;
-    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .feature-card-icon {
     width: 32px;
@@ -348,25 +317,17 @@
     margin-bottom: 3mm;
     font-size: 14pt;
   }
-  .feature-card h3 {
-    margin: 0 0 2mm 0;
-    font-size: 11pt;
-  }
-  .feature-card p {
-    margin: 0;
-    font-size: 9.5pt;
-    color: var(--muted);
-    line-height: 1.5;
-  }
+  .feature-card h3 { margin: 0 0 2mm 0; font-size: 11pt; }
+  .feature-card p { margin: 0; font-size: 9.5pt; color: var(--muted); line-height: 1.5; }
 
-  /* ── Dimension Cards (three pillars) ── */
+  /* ── Dimension cards ── */
+  /* Allow breaking (they're tall) but keep the number badge with its title */
   .dimension-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 6mm;
     margin: 4mm 0;
-    page-break-inside: avoid;
     display: flex;
     gap: 5mm;
     align-items: flex-start;
@@ -385,10 +346,7 @@
     font-family: 'Source Serif 4', serif;
     flex-shrink: 0;
   }
-  .dimension-content h3 {
-    margin: 0 0 1mm 0;
-    font-size: 13pt;
-  }
+  .dimension-content h3 { margin: 0 0 1mm 0; font-size: 13pt; }
   .dimension-content .sub-scores {
     display: flex;
     flex-wrap: wrap;
@@ -403,19 +361,21 @@
     border-radius: 4px;
     font-weight: 500;
   }
-  .dimension-content p {
-    font-size: 10pt;
-    color: var(--muted);
-    margin: 0;
-  }
+  .dimension-content p { font-size: 10pt; color: var(--muted); margin: 0; }
 
-  /* ── Table ── */
+  /* ── Tables ── */
+  /* Tables CAN break across pages (they're often tall); individual rows cannot */
   table {
     width: 100%;
     border-collapse: collapse;
     margin: 5mm 0;
     font-size: 9.5pt;
-    page-break-inside: avoid;
+  }
+  tr {
+    break-inside: avoid;
+  }
+  th {
+    break-after: avoid;
   }
   th {
     background: var(--espresso);
@@ -431,18 +391,10 @@
     border-bottom: 1px solid var(--border);
     vertical-align: top;
   }
-  tr:last-child td {
-    border-bottom: none;
-  }
-  td:first-child {
-    font-weight: 500;
-    color: var(--espresso);
-  }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 500; color: var(--espresso); }
 
-  /* ── Keyboard Shortcut Table ── */
-  .shortcut-table td:first-child {
-    width: 25%;
-  }
+  .shortcut-table td:first-child { width: 25%; }
   .shortcut-table kbd {
     display: inline-block;
     background: var(--card);
@@ -457,13 +409,13 @@
     margin-right: 3px;
   }
 
-  /* ── Score Ring (CSS) ── */
+  /* ── Score ring demo ── */
   .score-demo {
     display: flex;
     gap: 8mm;
     align-items: center;
     margin: 5mm 0;
-    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .score-ring {
     width: 80px;
@@ -500,53 +452,27 @@
   }
 
   /* ── TOC ── */
-  .toc-list {
-    list-style: none;
-    padding: 0;
-    margin: 6mm 0 0 0;
-  }
+  .toc-list { list-style: none; padding: 0; margin: 6mm 0 0 0; }
   .toc-list li {
     display: flex;
     align-items: baseline;
     padding: 3mm 0;
     border-bottom: 1px dotted var(--border);
     font-size: 11pt;
+    break-inside: avoid;
   }
-  .toc-num {
-    width: 12mm;
-    font-weight: 600;
-    color: var(--spotlight);
-    font-family: 'Inter', sans-serif;
-    font-size: 10pt;
-  }
-  .toc-title {
-    flex: 1;
-    color: var(--espresso);
-    font-weight: 500;
-  }
-  .toc-page {
-    color: var(--muted);
-    font-weight: 400;
-    font-size: 10pt;
-  }
-  .toc-dots {
-    flex: 1;
-    border-bottom: 1px dotted var(--border);
-    margin: 0 3mm;
-    height: 0;
-    align-self: center;
-    position: relative;
-    top: 3px;
-  }
+  .toc-num { width: 12mm; font-weight: 600; color: var(--spotlight); font-size: 10pt; }
+  .toc-title { flex: 1; color: var(--espresso); font-weight: 500; }
+  .toc-page { color: var(--muted); font-weight: 400; font-size: 10pt; }
 
-  /* ── Architecture Diagram ── */
+  /* ── Architecture diagram ── */
+  /* Architecture diagram: allow breaking to avoid large page gaps */
   .arch-diagram {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 6mm;
     margin: 5mm 0;
-    page-break-inside: avoid;
   }
   .arch-flow {
     display: flex;
@@ -562,39 +488,18 @@
     text-align: center;
     width: fit-content;
   }
-  .arch-node.upload {
-    background: var(--spotlight-pale);
-    color: var(--espresso);
-    border: 1px solid var(--spotlight-light);
-  }
-  .arch-node.api {
-    background: var(--espresso);
-    color: var(--cream);
-  }
-  .arch-node.provider {
-    background: #e8f0e8;
-    color: var(--emerald);
-    border: 1px solid var(--emerald);
-  }
-  .arch-node.result {
-    background: var(--spotlight);
-    color: white;
-  }
-  .arch-arrow {
-    color: var(--muted);
-    font-size: 14pt;
-    line-height: 1;
-  }
+  .arch-node.upload { background: var(--spotlight-pale); color: var(--espresso); border: 1px solid var(--spotlight-light); }
+  .arch-node.api { background: var(--espresso); color: var(--cream); }
+  .arch-node.provider { background: #e8f0e8; color: var(--emerald); border: 1px solid var(--emerald); }
+  .arch-node.result { background: var(--spotlight); color: white; }
+  .arch-arrow { color: var(--muted); font-size: 14pt; line-height: 1; }
 
-  /* ── Workflow Steps ── */
-  .workflow {
-    margin: 5mm 0;
-  }
+  /* ── Workflow steps ── */
   .workflow-step {
     display: flex;
     gap: 4mm;
     margin-bottom: 4mm;
-    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .workflow-num {
     width: 24px;
@@ -609,17 +514,10 @@
     font-weight: 700;
     flex-shrink: 0;
   }
-  .workflow-content h3 {
-    margin: 0 0 1mm 0;
-    font-size: 11pt;
-  }
-  .workflow-content p {
-    margin: 0;
-    font-size: 10pt;
-    color: var(--muted);
-  }
+  .workflow-content h3 { margin: 0 0 1mm 0; font-size: 11pt; }
+  .workflow-content p { margin: 0; font-size: 10pt; color: var(--muted); }
 
-  /* ── Market Grid ── */
+  /* ── Market grid ── */
   .market-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -631,7 +529,7 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 4mm;
-    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .market-card h4 {
     margin: 0 0 1mm 0;
@@ -639,13 +537,9 @@
     font-family: 'Inter', sans-serif;
     color: var(--spotlight);
   }
-  .market-card p {
-    margin: 0;
-    font-size: 9pt;
-    color: var(--muted);
-  }
+  .market-card p { margin: 0; font-size: 9pt; color: var(--muted); }
 
-  /* ── Quote ── */
+  /* ── Pull quote ── */
   .pull-quote {
     font-family: 'Source Serif 4', serif;
     font-size: 16pt;
@@ -655,7 +549,7 @@
     border-left: 3px solid var(--spotlight);
     padding: 4mm 0 4mm 8mm;
     margin: 6mm 0;
-    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .pull-quote-attr {
     font-size: 9pt;
@@ -665,23 +559,15 @@
     display: block;
   }
 
-  ul, ol {
-    margin: 0 0 4mm 0;
-    padding-left: 6mm;
-  }
-  li {
-    margin-bottom: 1.5mm;
-    font-size: 10.5pt;
-  }
-  ul li::marker {
-    color: var(--spotlight);
-  }
+  ul, ol { margin: 0 0 4mm 0; padding-left: 6mm; }
+  li { margin-bottom: 1.5mm; font-size: 10.5pt; }
+  ul li::marker { color: var(--spotlight); }
 </style>
 </head>
 <body>
 
 <!-- ═══════════════ COVER ═══════════════ -->
-<div class="page cover">
+<div class="cover">
   <div class="cover-top">
     <div class="cover-logo">
       <span class="cover-logo-dot"></span>
@@ -696,7 +582,7 @@
       Structured evaluation across technical, aesthetic, and casting
       dimensions — for photographers, actors, and casting professionals.
     </p>
-    <div class="cover-tags" style="margin-top: 8mm;">
+    <div class="cover-tags">
       <span class="cover-tag">Technical Quality</span>
       <span class="cover-tag">Aesthetic &amp; Market Fit</span>
       <span class="cover-tag">Casting Attributes</span>
@@ -716,7 +602,7 @@
 </div>
 
 <!-- ═══════════════ TABLE OF CONTENTS ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Contents</span>
@@ -724,36 +610,29 @@
     </h1>
     <p class="section-lead">Everything you need to evaluate, curate, and export headshots with confidence.</p>
   </div>
-
   <ul class="toc-list">
-    <li><span class="toc-num">01</span><span class="toc-title">Introduction &amp; Positioning</span><span class="toc-dots"></span><span class="toc-page">3</span></li>
-    <li><span class="toc-num">02</span><span class="toc-title">The Three-Dimension System</span><span class="toc-dots"></span><span class="toc-page">4</span></li>
-    <li><span class="toc-num">03</span><span class="toc-title">Getting Started</span><span class="toc-dots"></span><span class="toc-page">5</span></li>
-    <li><span class="toc-num">04</span><span class="toc-title">Understanding the Evaluation</span><span class="toc-dots"></span><span class="toc-page">6</span></li>
-    <li><span class="toc-num">05</span><span class="toc-title">Market Contexts</span><span class="toc-dots"></span><span class="toc-page">7</span></li>
-    <li><span class="toc-num">06</span><span class="toc-title">Shortlist &amp; Curation</span><span class="toc-dots"></span><span class="toc-page">8</span></li>
-    <li><span class="toc-num">07</span><span class="toc-title">Comparison View</span><span class="toc-dots"></span><span class="toc-page">9</span></li>
-    <li><span class="toc-num">08</span><span class="toc-title">Keyboard Shortcuts</span><span class="toc-dots"></span><span class="toc-page">10</span></li>
-    <li><span class="toc-num">09</span><span class="toc-title">Mobile Experience</span><span class="toc-dots"></span><span class="toc-page">10</span></li>
-    <li><span class="toc-num">10</span><span class="toc-title">Ethics &amp; Fairness</span><span class="toc-dots"></span><span class="toc-page">11</span></li>
-    <li><span class="toc-num">11</span><span class="toc-title">Technical Architecture</span><span class="toc-dots"></span><span class="toc-page">12</span></li>
-    <li><span class="toc-num">12</span><span class="toc-title">API Reference</span><span class="toc-dots"></span><span class="toc-page">13</span></li>
-    <li><span class="toc-num">13</span><span class="toc-title">Deployment</span><span class="toc-dots"></span><span class="toc-page">14</span></li>
+    <li><span class="toc-num">01</span><span class="toc-title">Introduction &amp; Positioning</span><span class="toc-page">3</span></li>
+    <li><span class="toc-num">02</span><span class="toc-title">The Three-Dimension System</span><span class="toc-page">4</span></li>
+    <li><span class="toc-num">03</span><span class="toc-title">Getting Started</span><span class="toc-page">5</span></li>
+    <li><span class="toc-num">04</span><span class="toc-title">Understanding the Evaluation</span><span class="toc-page">6</span></li>
+    <li><span class="toc-num">05</span><span class="toc-title">Market Contexts</span><span class="toc-page">7</span></li>
+    <li><span class="toc-num">06</span><span class="toc-title">Shortlist &amp; Curation</span><span class="toc-page">8</span></li>
+    <li><span class="toc-num">07</span><span class="toc-title">Comparison View</span><span class="toc-page">9</span></li>
+    <li><span class="toc-num">08</span><span class="toc-title">Keyboard Shortcuts</span><span class="toc-page">10</span></li>
+    <li><span class="toc-num">09</span><span class="toc-title">Mobile Experience</span><span class="toc-page">10</span></li>
+    <li><span class="toc-num">10</span><span class="toc-title">Ethics &amp; Fairness</span><span class="toc-page">11</span></li>
+    <li><span class="toc-num">11</span><span class="toc-title">Technical Architecture</span><span class="toc-page">12</span></li>
+    <li><span class="toc-num">12</span><span class="toc-title">API Reference</span><span class="toc-page">13</span></li>
+    <li><span class="toc-num">13</span><span class="toc-title">Deployment</span><span class="toc-page">14</span></li>
   </ul>
-
   <div class="callout" style="margin-top: 10mm;">
     <div class="callout-title">How to read this manual</div>
     <p>Sections 1–5 are for all users. Sections 6–9 cover curation and power features. Sections 10–13 are for developers and operators deploying or extending the system.</p>
   </div>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">2</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 01 INTRODUCTION ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 01</span>
@@ -761,16 +640,12 @@
     </h1>
     <p class="section-lead">An assistive tool that evaluates a photograph — never a person.</p>
   </div>
-
   <p>Spotlight Review is an AI-powered headshot evaluator designed for photographers, actors, and casting professionals. It analyses casting headshots across three structured dimensions — technical quality, aesthetic and market fit, and casting attributes — and returns actionable, transparent feedback with explicit confidence bands.</p>
-
   <p>The system is built on a fundamental principle: it evaluates a <strong>photograph</strong>, never a <strong>person</strong>. Every output is phrased as a property of the image and the casting context. The tool never judges attractiveness as a headline metric, never issues a verdict on someone's worth, and always communicates uncertainty. It exists to support human judgement, not to replace it.</p>
-
   <div class="pull-quote">
     "Assistive feedback on photographs, for humans who remain in charge."
     <span class="pull-quote-attr">— Product positioning principle</span>
   </div>
-
   <h2>Who it's for</h2>
   <div class="feature-grid">
     <div class="feature-card">
@@ -794,20 +669,14 @@
       <p>Export a ranked, annotated shortlist as a print-ready PDF for client review or platform submission.</p>
     </div>
   </div>
-
   <div class="ethics-box">
     <div class="callout-title">What this tool is not</div>
     <p>This is <strong>not</strong> "AI that tells you how attractive you are." It does not assess a person's beauty. It does not serve as an automated screening gate. It does not make casting decisions. Final judgement always rests with the human professional.</p>
   </div>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">3</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 02 THREE-DIMENSION SYSTEM ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 02</span>
@@ -815,9 +684,7 @@
     </h1>
     <p class="section-lead">Every headshot is assessed across three independent dimensions, each broken into sub-scores.</p>
   </div>
-
   <p>Rather than a single opaque score, Spotlight Review breaks each evaluation into three dimensions that map to the real concerns of casting and photography. Each dimension produces sub-scores (0–1), issue flags, and contributes to a weighted composite overall score (0–100). The weights are configurable per market context.</p>
-
   <div class="dimension-card">
     <div class="dimension-number">1</div>
     <div class="dimension-content">
@@ -833,7 +700,6 @@
       <p><strong>Eye focus</strong> is the single most important technical signal in a headshot — the near eye should be the sharpest point in the frame. Flags include: <code>soft_focus</code>, <code>backlit</code>, <code>noisy</code>, <code>underexposed</code>, <code>overexposed</code>, <code>color_cast</code>, <code>clipped_highlights</code>, <code>motion_blur</code>.</p>
     </div>
   </div>
-
   <div class="dimension-card">
     <div class="dimension-number">2</div>
     <div class="dimension-content">
@@ -849,7 +715,6 @@
       <p>Expression and wardrobe fit are judged <strong>relative to the selected market context</strong> — the same expression that scores high in "Drama" may score lower in "US Commercial." Flags include: <code>busy_background</code>, <code>tight_crop</code>, <code>loose_crop</code>, <code>distracting_wardrobe</code>, <code>flat_lighting</code>, <code>overstylised</code>.</p>
     </div>
   </div>
-
   <div class="dimension-card">
     <div class="dimension-number">3</div>
     <div class="dimension-content">
@@ -864,15 +729,10 @@
       <p>Type labels include: <code>commercial</code>, <code>romantic_lead</code>, <code>villain</code>, <code>best_friend</code>, <code>character_actor</code>, <code>corporate</code>, <code>authority</code>, <code>dramatic_lead</code>. Gender presentation includes an explicit <code>uncertain</code> class with a confidence score — the model never forces a binary when it's genuinely unsure.</p>
     </div>
   </div>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">4</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 03 GETTING STARTED ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 03</span>
@@ -880,58 +740,49 @@
     </h1>
     <p class="section-lead">From upload to evaluation in under a minute.</p>
   </div>
-
-  <div class="workflow">
-    <div class="workflow-step">
-      <div class="workflow-num">1</div>
-      <div class="workflow-content">
-        <h3>Set the market context</h3>
-        <p>Choose one of five market lenses before uploading. The same headshot scores differently per market — this is legitimate, not a bug. Pick the lens you're curating for: US Commercial, UK Theatrical, Drama, Comedy, or Film &amp; TV.</p>
-      </div>
-    </div>
-    <div class="workflow-step">
-      <div class="workflow-num">2</div>
-      <div class="workflow-content">
-        <h3>Upload your headshots</h3>
-        <p>Drag and drop a batch of portraits (JPG, PNG, WebP) onto the upload zone, or click "Browse files." Images are automatically resized to max 1024px before upload to keep payloads small. Alternatively, click "Try sample headshots" to evaluate 6 pre-loaded portraits instantly.</p>
-      </div>
-    </div>
-    <div class="workflow-step">
-      <div class="workflow-num">3</div>
-      <div class="workflow-content">
-        <h3>Wait for evaluation</h3>
-        <p>Evaluations process sequentially (one at a time, ~12 seconds each) to respect API rate limits. A sticky progress bar shows processed count, percentage, and ETA. You can pause, resume, or cancel at any time.</p>
-      </div>
-    </div>
-    <div class="workflow-step">
-      <div class="workflow-num">4</div>
-      <div class="workflow-content">
-        <h3>Review and curate</h3>
-        <p>Each portrait card shows the overall score, top type label, apparent age, and any flags. Click any card to open the full detail dialog with radar chart, per-dimension breakdown, casting attributes, and structured feedback. Pin, reject, override, or compare as you go.</p>
-      </div>
-    </div>
-    <div class="workflow-step">
-      <div class="workflow-num">5</div>
-      <div class="workflow-content">
-        <h3>Export your shortlist</h3>
-        <p>Click "Export PDF" to generate a print-ready document of your top-8 shortlist with scores, flags, and notes. The PDF opens in a new window — use your browser's "Save as PDF" to download.</p>
-      </div>
+  <div class="workflow-step">
+    <div class="workflow-num">1</div>
+    <div class="workflow-content">
+      <h3>Set the market context</h3>
+      <p>Choose one of five market lenses before uploading. The same headshot scores differently per market — this is legitimate, not a bug. Pick the lens you're curating for: US Commercial, UK Theatrical, Drama, Comedy, or Film &amp; TV.</p>
     </div>
   </div>
-
+  <div class="workflow-step">
+    <div class="workflow-num">2</div>
+    <div class="workflow-content">
+      <h3>Upload your headshots</h3>
+      <p>Drag and drop a batch of portraits (JPG, PNG, WebP) onto the upload zone, or click "Browse files." Images are automatically resized to max 1024px before upload to keep payloads small. Alternatively, click "Try sample headshots" to evaluate 6 pre-loaded portraits instantly.</p>
+    </div>
+  </div>
+  <div class="workflow-step">
+    <div class="workflow-num">3</div>
+    <div class="workflow-content">
+      <h3>Wait for evaluation</h3>
+      <p>Evaluations process sequentially (one at a time, ~12 seconds each) to respect API rate limits. A sticky progress bar shows processed count, percentage, and ETA. You can pause, resume, or cancel at any time.</p>
+    </div>
+  </div>
+  <div class="workflow-step">
+    <div class="workflow-num">4</div>
+    <div class="workflow-content">
+      <h3>Review and curate</h3>
+      <p>Each portrait card shows the overall score, top type label, apparent age, and any flags. Click any card to open the full detail dialog with radar chart, per-dimension breakdown, casting attributes, and structured feedback. Pin, reject, override, or compare as you go.</p>
+    </div>
+  </div>
+  <div class="workflow-step">
+    <div class="workflow-num">5</div>
+    <div class="workflow-content">
+      <h3>Export your shortlist</h3>
+      <p>Click "Export PDF" to generate a print-ready document of your top-8 shortlist with scores, flags, and notes. The PDF opens in a new window — use your browser's "Save as PDF" to download.</p>
+    </div>
+  </div>
   <div class="callout">
     <div class="callout-title">Persistence</div>
     <p>Your portraits, evaluations, pins, and overrides survive a page refresh. Uploaded images are stored in the browser's IndexedDB; metadata and evaluations are stored in localStorage. No data is lost if you accidentally close the tab.</p>
   </div>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">5</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 04 UNDERSTANDING THE EVALUATION ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 04</span>
@@ -939,10 +790,8 @@
     </h1>
     <p class="section-lead">Every score is transparent, explainable, and accompanied by a confidence band.</p>
   </div>
-
   <h2>The overall score</h2>
   <p>The 0–100 composite score is computed from the three dimensions using per-market weights. Technical quality typically carries 25–35% weight, aesthetic and market fit 35–45%, and casting fit 20–40%. A small flag penalty (2 points per technical flag, capped at 6) is subtracted. The exact breakdown is shown in the detail dialog under "How this score was computed."</p>
-
   <div class="score-demo">
     <div class="score-ring">
       <div class="score-ring-inner">
@@ -954,38 +803,21 @@
       <p style="margin:0;font-size:10pt;color:var(--muted);">Score bands: <strong style="color:#4a8a5c;">80–100 Excellent</strong> · <strong style="color:var(--spotlight);">65–79 Strong</strong> · <strong style="color:#d4943a;">50–64 Competent</strong> · <strong style="color:var(--rose);">0–49 Needs work</strong></p>
     </div>
   </div>
-
   <h2>Confidence and uncertainty</h2>
   <p>Every evaluation ships with a confidence band (0–1). When confidence drops below 50%, the UI displays an amber notice recommending a human reviewer for the final call. This is a core fairness feature — the model is honest about its own reliability rather than presenting every score as equally trustworthy.</p>
-
   <h2>Structured observations vs. model notes</h2>
   <p>The Feedback tab in the detail dialog shows two types of feedback:</p>
   <table>
-    <tr>
-      <th style="width:30%;">Type</th>
-      <th>Characteristics</th>
-    </tr>
-    <tr>
-      <td>Structured observations</td>
-      <td>Deterministic, auditable feedback generated from the structured scores and flags. Each flag maps to a fixed, human-reviewed sentence. Impossible to hallucinate. Examples: "Eyes are tack-sharp," "Background is busy — consider a cleaner backdrop."</td>
-    </tr>
-    <tr>
-      <td>Model notes</td>
-      <td>Free-form observations from the vision model. Supplementary to the structured observations. More nuanced but less auditable. Shown separately so users always have a trustworthy baseline.</td>
-    </tr>
+    <tr><th style="width:30%;">Type</th><th>Characteristics</th></tr>
+    <tr><td>Structured observations</td><td>Deterministic, auditable feedback generated from the structured scores and flags. Each flag maps to a fixed, human-reviewed sentence. Impossible to hallucinate. Examples: "Eyes are tack-sharp," "Background is busy — consider a cleaner backdrop."</td></tr>
+    <tr><td>Model notes</td><td>Free-form observations from the vision model. Supplementary to the structured observations. More nuanced but less auditable. Shown separately so users always have a trustworthy baseline.</td></tr>
   </table>
-
   <h2>The radar chart</h2>
   <p>The detail dialog's Overview tab includes a 10-axis radar chart that visualises all sub-scores simultaneously — five technical axes and five aesthetic axes. This lets you spot patterns at a glance: a portrait with high exposure but low eye focus, or high composition but low background cleanliness, tells a specific story about what to fix.</p>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">6</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 05 MARKET CONTEXTS ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 05</span>
@@ -993,9 +825,7 @@
     </h1>
     <p class="section-lead">The same headshot reads differently per market. Pick the lens you're curating for.</p>
   </div>
-
   <p>Spotlight Review supports five market contexts. Each context adjusts the evaluation weights, the expression-fit and wardrobe-fit criteria, and the composite score. Switching market is instant if a cached evaluation exists for that market — otherwise the system re-evaluates with the new lens.</p>
-
   <div class="market-grid">
     <div class="market-card">
       <h4>US Commercial</h4>
@@ -1018,20 +848,14 @@
       <p>Rewards naturalistic believability — mid contrast, real skin texture, subtle expression, wardrobe that could exist in the world of the story. Penalises overt "modelling shoot" stylisation, heavy retouching cues, and overly graphic backdrops.</p>
     </div>
   </div>
-
   <div class="callout">
     <div class="callout-title">Market switching &amp; caching</div>
     <p>When you change market, any portrait that already has a cached evaluation for that market is updated instantly — no re-evaluation needed. Only portraits without a cached result for the new market are sent to the API. This makes market comparison a genuine exploration tool rather than a waiting game.</p>
   </div>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">7</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 06 SHORTLIST & CURATION ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 06</span>
@@ -1039,58 +863,28 @@
     </h1>
     <p class="section-lead">Pin, reject, override, and let the smart shortlist balance score with range.</p>
   </div>
-
   <h2>The smart shortlist</h2>
   <p>The suggested shortlist ranks your top-8 portraits, but it doesn't simply pick the 8 highest scores. It balances score with <strong>expression and type diversity</strong> — a mix of commercial, dramatic, and character types at slightly lower scores beats eight near-identical frames. Pinned portraits always win: if you pin a portrait, it's guaranteed a spot in the shortlist regardless of score.</p>
-
   <h2>Pin, reject, and override</h2>
   <table>
-    <tr>
-      <th style="width:20%;">Action</th>
-      <th style="width:15%;">Shortcut</th>
-      <th>Effect</th>
-    </tr>
-    <tr>
-      <td>Pin</td>
-      <td><kbd>F</kbd></td>
-      <td>Force-includes the portrait in the shortlist. Pinned items always rank, regardless of score. Unpins if already pinned.</td>
-    </tr>
-    <tr>
-      <td>Reject</td>
-      <td><kbd>X</kbd></td>
-      <td>Removes the portrait from the shortlist and greys it out in the grid. Toggle "show rejected" in the toolbar to review. Un-rejects if already rejected.</td>
-    </tr>
-    <tr>
-      <td>Override score</td>
-      <td>—</td>
-      <td>Drag the slider in the detail dialog to set a custom score. Marked as "score overridden" on the card. Your override replaces the model's score in the shortlist ranking.</td>
-    </tr>
-    <tr>
-      <td>Remove</td>
-      <td>—</td>
-      <td>Deletes the portrait entirely. An undo toast appears for 6 seconds — click "Undo" to restore.</td>
-    </tr>
+    <tr><th style="width:20%;">Action</th><th style="width:15%;">Shortcut</th><th>Effect</th></tr>
+    <tr><td>Pin</td><td><kbd>F</kbd></td><td>Force-includes the portrait in the shortlist. Pinned items always rank, regardless of score. Unpins if already pinned.</td></tr>
+    <tr><td>Reject</td><td><kbd>X</kbd></td><td>Removes the portrait from the shortlist and greys it out in the grid. Toggle "show rejected" in the toolbar to review. Un-rejects if already rejected.</td></tr>
+    <tr><td>Override score</td><td>—</td><td>Drag the slider in the detail dialog to set a custom score. Marked as "score overridden" on the card. Your override replaces the model's score in the shortlist ranking.</td></tr>
+    <tr><td>Remove</td><td>—</td><td>Deletes the portrait entirely. An undo toast appears for 6 seconds — click "Undo" to restore.</td></tr>
   </table>
-
   <h2>Multi-select mode</h2>
   <p>Click "Select" in the toolbar to enter multi-select mode. Click portrait cards to select them (a checkmark appears), then use the bulk action bar to pin, reject, or remove all selected at once. "All" selects every non-rejected portrait; "None" clears the selection.</p>
-
   <h2>Outcome tracking</h2>
   <p>In the detail dialog, you can optionally mark a headshot's submission outcome: <strong>Booked</strong>, <strong>Audition</strong>, or <strong>No response</strong>. This is a secondary, noisy training signal — it helps correlate headshot qualities with real-world results over time. Outcomes appear as a badge on the portrait card and are logged (with consent) to the feedback database.</p>
-
   <div class="ethics-box">
     <div class="callout-title">Your edits teach the tool</div>
     <p>Every pin, reject, and override is framed as "teaching the tool." If you've granted consent, these edits are logged anonymously (image hash + action only, never the image itself or your identity) as training signal to improve the evaluator over time. You can revoke consent at any time.</p>
   </div>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">8</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 07 COMPARISON VIEW ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 07</span>
@@ -1098,9 +892,7 @@
     </h1>
     <p class="section-lead">Side-by-side analysis of up to four portraits, with the system's reasoning visible.</p>
   </div>
-
   <p>The comparison view is where the system earns trust. Add up to four portraits to the compare set using the compare button on any portrait card (the git-compare icon). Then click "Compare" in the toolbar to open the side-by-side dialog.</p>
-
   <h2>What you see</h2>
   <ul>
     <li><strong>Side-by-side images</strong> with score rings and quality-band labels</li>
@@ -1110,23 +902,16 @@
     <li><strong>Top type label</strong> and flags for each portrait</li>
     <li><strong>"View full details"</strong> button to jump to any portrait's detail dialog</li>
   </ul>
-
   <div class="callout">
     <div class="callout-title">Why comparison matters</div>
     <p>For a curation tool, comparison is the core interaction — not a nice-to-have. When a photographer has 200 frames from a session, they don't just want individual scores; they want to know <em>why one ranks higher than another</em>. The comparison view makes the model's reasoning visible: you can see exactly which dimensions differ, which flags fire on one but not the other, and whether the ranking aligns with your professional judgement.</p>
   </div>
-
   <h2>Compare limits</h2>
   <p>You can compare up to <strong>4 portraits</strong> at a time. The compare button on cards is disabled once you reach 4. Remove a portrait from the compare set (either from the card or inside the comparison view) to add a different one.</p>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">9</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 08 KEYBOARD SHORTCUTS ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 08</span>
@@ -1134,14 +919,9 @@
     </h1>
     <p class="section-lead">Power-user culling at the speed of thought.</p>
   </div>
-
   <p>Spotlight Review supports keyboard shortcuts for fast, keyboard-driven culling — essential when working through 200+ frames. Shortcuts are disabled while typing in an input field or when a dialog is open (except Escape, which closes the active dialog).</p>
-
   <table class="shortcut-table">
-    <tr>
-      <th>Key</th>
-      <th>Action</th>
-    </tr>
+    <tr><th>Key</th><th>Action</th></tr>
     <tr><td><kbd>J</kbd> <kbd>↓</kbd></td><td>Select the next portrait (wraps around)</td></tr>
     <tr><td><kbd>K</kbd> <kbd>↑</kbd></td><td>Select the previous portrait (wraps around)</td></tr>
     <tr><td><kbd>Enter</kbd></td><td>Open the detail dialog for the selected portrait</td></tr>
@@ -1151,22 +931,22 @@
     <tr><td><kbd>?</kbd></td><td>Toggle the keyboard shortcuts help dialog</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>Close the active dialog or detail view</td></tr>
   </table>
-
   <div class="callout">
     <div class="callout-title">Workflow tip</div>
     <p>For a fast cull: press <kbd>J</kbd> to move to the next portrait, <kbd>F</kbd> to flag keepers, <kbd>X</kbd> to reject duds, and <kbd>Enter</kbd> to inspect any borderline frame in detail. You can process dozens of portraits per minute without touching the mouse.</p>
   </div>
+</div>
 
-  <div style="margin-top: 10mm;">
-    <h1 class="section-title" style="font-size: 22pt;">
-      <span class="num" style="font-size: 12pt;">Section 09</span>
+<!-- ═══════════════ 09 MOBILE EXPERIENCE ═══════════════ -->
+<div class="section">
+  <div class="section-header">
+    <h1 class="section-title">
+      <span class="num">Section 09</span>
       Mobile Experience
     </h1>
-    <p class="section-lead" style="font-size: 11pt;">Designed for actors curating on the go.</p>
+    <p class="section-lead">Designed for actors curating on the go.</p>
   </div>
-
   <p>Spotlight Review is fully responsive and optimised for mobile use. The layout adapts at each breakpoint: the portrait grid collapses from 5 columns to 2, the market selector and upload zone stack vertically, and the header collapses to essentials.</p>
-
   <h3>Mobile-specific features</h3>
   <ul>
     <li><strong>Floating shortlist button</strong> — a floating "Shortlist N" button sits in the bottom-right corner, opening a bottom-sheet drawer with your ranked top-8. This solves the problem of the shortlist sitting below the entire grid on mobile.</li>
@@ -1174,15 +954,10 @@
     <li><strong>Tabbed detail dialog</strong> — on mobile, the detail dialog uses a 5-tab layout (Overview, Technical, Aesthetic, Casting, Notes) instead of a long scroll, keeping each section digestible.</li>
     <li><strong>Camera upload</strong> — the "Browse files" button opens the native mobile file picker, which on iOS includes the camera. You can shoot and evaluate directly.</li>
   </ul>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">10</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 10 ETHICS & FAIRNESS ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 10</span>
@@ -1190,27 +965,21 @@
     </h1>
     <p class="section-lead">Subjectivity honoured, bias under watch, human always in charge.</p>
   </div>
-
   <p>Ethics is not a section bolted on at the end — it shapes the architecture. Spotlight Review is designed around three ethical pillars that govern every design and engineering decision.</p>
-
   <div class="ethics-box">
     <div class="callout-title">Pillar 1 — Subjectivity, honoured</div>
     <p>Beauty and casting suitability are not universal. Different markets and genres have different standards. The system is configurable per market context, surfaces confidence on every output, and explicitly recommends human review when the model is outside its reliable range. When the model is unsure, it says so — it never presents a low-confidence score as equally trustworthy.</p>
   </div>
-
   <div class="ethics-box">
     <div class="callout-title">Pillar 2 — Bias under watch</div>
     <p>Models trained on skewed data can under-score certain ethnicities, ages, body types, or gender presentations. The design calls for: diverse training data collection, bias testing and monitoring by demographic group on a frozen benchmark, and surfacing per-subgroup confidence and reliability flags. The gender presentation output includes an explicit "uncertain" class — the model never forces a binary when it's genuinely unsure, and the UX prompts users to self-identify.</p>
   </div>
-
   <div class="ethics-box">
     <div class="callout-title">Pillar 3 — Assistive, not a verdict</div>
     <p>This tool evaluates a photograph, never a person. It exists to support photographers, actors, and casting — never to replace human judgement or act as an automated screening gate. The product SLA is advisory. The system never outputs an "attractiveness" score as a headline. Override and pin are first-class features, not workarounds. The framing throughout is "assistive feedback for photographers and actors," not "AI that tells you how attractive you are."</p>
   </div>
-
   <h2>Consent and data</h2>
   <p>Before any user edits are logged as training signal, the consent modal appears. Users choose to "help improve the tool" or "keep edits private." Only the image hash and the action (pin, reject, override) are stored — never the image itself, never the user's identity. Consent can be revoked at any time. All logging is gated by the consent record in the database.</p>
-
   <h2>Guardrails</h2>
   <ul>
     <li>The system <strong>never</strong> outputs an attractiveness score as a headline</li>
@@ -1219,15 +988,10 @@
     <li>A <strong>public feedback channel</strong> lets users flag scores they believe are wrong</li>
     <li>The internal review board signs off on each model release</li>
   </ul>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">11</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 11 TECHNICAL ARCHITECTURE ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 11</span>
@@ -1235,7 +999,6 @@
     </h1>
     <p class="section-lead">A multi-provider vision system with a durable structured-output contract.</p>
   </div>
-
   <h2>System flow</h2>
   <div class="arch-diagram">
     <div class="arch-flow">
@@ -1252,44 +1015,23 @@
       <div class="arch-node result">HeadshotEvaluation JSON response</div>
     </div>
   </div>
-
   <h2>Provider abstraction</h2>
   <p>The vision backend is swappable via the <code>VISION_PROVIDER</code> environment variable. Two providers are implemented:</p>
   <table>
-    <tr>
-      <th style="width:20%;">Provider</th>
-      <th style="width:25%;">Model</th>
-      <th>Notes</th>
-    </tr>
-    <tr>
-      <td><code>gemini</code> (default)</td>
-      <td>Google Gemini 2.5 Flash</td>
-      <td>Free tier (1,500 req/day). Public API, reachable from Vercel. Uses native JSON response schema for reliable structured output.</td>
-    </tr>
-    <tr>
-      <td><code>zai</code></td>
-      <td>GLM-4V (ZAI SDK)</td>
-      <td>Internal Z.ai API, only reachable from inside Z.ai's network. Used in the sandbox environment. Includes 429 retry-with-backoff.</td>
-    </tr>
+    <tr><th style="width:20%;">Provider</th><th style="width:25%;">Model</th><th>Notes</th></tr>
+    <tr><td><code>gemini</code> (default)</td><td>Google Gemini 2.5 Flash</td><td>Free tier (1,500 req/day). Public API, reachable from Vercel. Uses native JSON response schema for reliable structured output.</td></tr>
+    <tr><td><code>zai</code></td><td>GLM-4V (ZAI SDK)</td><td>Internal Z.ai API, only reachable from inside Z.ai's network. Used in the sandbox environment. Includes 429 retry-with-backoff.</td></tr>
   </table>
-
   <h2>Structured output contract</h2>
   <p>The <code>HeadshotEvaluation</code> type is the durable asset — the backend model is swappable, but the output schema stays constant. This means the frontend never changes when switching providers. The contract includes: <code>overall_score</code> (0–100), <code>overall_confidence</code> (0–1), three dimension blocks with sub-scores and flags, casting attributes, narrative feedback array, market context, model version, and disclaimer.</p>
-
   <h2>Client architecture</h2>
   <p>The frontend uses a Zustand store with persistence (localStorage for metadata, IndexedDB for image blobs). The store manages: the portrait collection, evaluation queue (sequential with pause/resume/cancel), per-market client-side cache, multi-select state, compare set, consent gating, undo stack, and outcome tracking. The evaluation queue processes one image at a time with a 1.2s gap to respect API rate limits.</p>
-
   <h2>Database</h2>
   <p>Prisma ORM with SQLite. Four models: <code>EvaluationCache</code> (image hash + market → cached result), <code>FeedbackLog</code> (user edits as training signal), <code>Outcome</code> (booked/audition/no-response), <code>ConsentRecord</code> (per-session consent). On Vercel, SQLite is ephemeral (serverless filesystem) — the app gracefully handles DB failures, and client-side caching ensures the UX is unaffected.</p>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">12</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 12 API REFERENCE ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 12</span>
@@ -1297,38 +1039,28 @@
     </h1>
     <p class="section-lead">Five endpoints powering the evaluation, feedback, consent, and export flows.</p>
   </div>
-
   <h3><code>POST /api/evaluate</code></h3>
   <p>Evaluates a headshot image. Accepts a data URL or remote URL and a market context. Returns the full <code>HeadshotEvaluation</code> object with composite score, sub-scores, flags, casting attributes, and narrative feedback. Results are cached server-side by image hash + market.</p>
   <p><strong>Request:</strong> <code>{ "image": "data:image/jpeg;base64,...", "market": "us_commercial", "imageHash": "..." }</code></p>
   <p><strong>Response:</strong> <code>{ "evaluation": HeadshotEvaluation, "imageHash": "..." }</code></p>
-
   <h3><code>POST /api/feedback</code></h3>
   <p>Logs a user edit (pin, reject, override, remove, compare) as training signal. Only persists if the session has granted consent. Always returns 200 so the UX never blocks on logging.</p>
   <p><strong>Request:</strong> <code>{ "sessionKey": "...", "imageHash": "...", "market": "...", "action": "pin", "value": "optional" }</code></p>
-
   <h3><code>POST /api/outcome</code></h3>
   <p>Records a submission outcome (booked, audition, no_response) for a headshot. Secondary, noisy training signal. Requires consent.</p>
   <p><strong>Request:</strong> <code>{ "sessionKey": "...", "imageHash": "...", "market": "...", "result": "booked", "note": "optional" }</code></p>
-
   <h3><code>GET / POST /api/consent</code></h3>
   <p>Checks or sets consent for a session. <code>GET</code> returns the current consent state; <code>POST</code> grants or revokes. The session key is an anonymous client-generated ID.</p>
   <p><strong>GET:</strong> <code>/api/consent?sessionKey=...</code> → <code>{ "ok": true, "granted": true }</code></p>
   <p><strong>POST:</strong> <code>{ "sessionKey": "...", "granted": true }</code></p>
-
   <h3><code>POST /api/export-shortlist</code></h3>
   <p>Generates a standalone, print-optimised HTML document for the shortlist. The client opens it in a new window and calls <code>print()</code> — the user can then "Save as PDF." The document includes ranked cards with images, scores, flags, type labels, and narrative notes.</p>
   <p><strong>Request:</strong> <code>{ "items": [...], "market": "us_commercial", "sessionName": "Shortlist 2024-01-15" }</code></p>
   <p><strong>Response:</strong> HTML document (Content-Type: text/html)</p>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual</span>
-    <span class="page-footer-right">13</span>
-  </div>
 </div>
 
 <!-- ═══════════════ 13 DEPLOYMENT ═══════════════ -->
-<div class="page">
+<div class="section">
   <div class="section-header">
     <h1 class="section-title">
       <span class="num">Section 13</span>
@@ -1336,15 +1068,10 @@
     </h1>
     <p class="section-lead">Running Spotlight Review on Vercel with Google Gemini's free tier.</p>
   </div>
-
   <h2>Live deployment</h2>
   <p>The production deployment runs on Vercel serverless (US region) using Google Gemini 2.5 Flash as the vision provider. The Gemini free tier allows 1,500 evaluations per day at no cost — sufficient for a demo or small-scale production use.</p>
-
   <table>
-    <tr>
-      <th style="width:30%;">Component</th>
-      <th>Value</th>
-    </tr>
+    <tr><th style="width:30%;">Component</th><th>Value</th></tr>
     <tr><td>Production URL</td><td><code>spotlight-review.vercel.app</code></td></tr>
     <tr><td>Source</td><td><code>github.com/Optitude-AI/spotlight-review</code></td></tr>
     <tr><td>Vision provider</td><td>Google Gemini 2.5 Flash (free tier)</td></tr>
@@ -1352,40 +1079,26 @@
     <tr><td>Hosting</td><td>Vercel serverless functions</td></tr>
     <tr><td>Database</td><td>SQLite (ephemeral on serverless)</td></tr>
   </table>
-
   <h2>Environment variables</h2>
   <table>
-    <tr>
-      <th style="width:30%;">Variable</th>
-      <th style="width:15%;">Required</th>
-      <th>Purpose</th>
-    </tr>
+    <tr><th style="width:30%;">Variable</th><th style="width:15%;">Required</th><th>Purpose</th></tr>
     <tr><td><code>VISION_PROVIDER</code></td><td>Yes</td><td><code>gemini</code> or <code>zai</code>. Default: <code>gemini</code></td></tr>
     <tr><td><code>GEMINI_API_KEY</code></td><td>If gemini</td><td>Free key from <code>aistudio.google.com/apikey</code></td></tr>
     <tr><td><code>DATABASE_URL</code></td><td>Yes</td><td>SQLite path. Use <code>file:/tmp/custom.db</code> on Vercel</td></tr>
     <tr><td><code>ZAI_*</code></td><td>If zai</td><td>ZAI credentials (baseUrl, apiKey, token, chatId, userId)</td></tr>
   </table>
-
   <h2>Deploy script</h2>
   <p>A non-interactive deploy script is included at <code>deploy-to-vercel.sh</code>. It sets all environment variables and deploys to production in one command:</p>
   <p><code>VERCEL_TOKEN=&lt;token&gt; GEMINI_API_KEY=&lt;key&gt; bash deploy-to-vercel.sh</code></p>
-
   <h2>Local development</h2>
   <p>For local development, the ZAI provider is used by default in the Z.ai sandbox (where <code>/etc/.z-ai-config</code> exists). To use Gemini locally, set <code>VISION_PROVIDER=gemini</code> and <code>GEMINI_API_KEY</code> in <code>.env</code>. Run <code>bun run dev</code> to start the dev server on port 3000.</p>
-
   <div class="warn-box">
     <div class="callout-title">SQLite on Vercel</div>
     <p>SQLite is ephemeral on Vercel's serverless filesystem — server-side caching and feedback logging won't persist across function invocations. The app gracefully handles this: client-side caching (in the browser) still works, and all API routes catch DB failures silently. For persistent server-side storage, consider Vercel Postgres or Turso (libSQL).</p>
   </div>
-
   <div class="callout" style="margin-top: 8mm;">
     <div class="callout-title">Getting help</div>
     <p>Source code and issues: <code>github.com/Optitude-AI/spotlight-review</code> · Live app: <code>spotlight-review.vercel.app</code></p>
-  </div>
-
-  <div class="page-footer">
-    <span class="page-footer-left">Spotlight Review · User Manual · End of Document</span>
-    <span class="page-footer-right">14</span>
   </div>
 </div>
 
