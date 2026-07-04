@@ -1,8 +1,5 @@
 // This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// learn more about it in the docs: https://pris.ly/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -29,4 +26,55 @@ model Post {
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Server-side cache of evaluation results, keyed by image hash + market.
+/// Avoids re-calling the vision API when the same image is evaluated again
+/// (e.g. after a market switch-back, or a page refresh).
+model EvaluationCache {
+  id        String   @id @default(cuid())
+  imageHash String
+  market    String
+  result    String // JSON-serialised HeadshotEvaluation
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([imageHash, market])
+  @@index([imageHash])
+}
+
+/// User edits (pin / reject / override / remove) logged as training signal.
+/// Only written when the user has granted consent.
+model FeedbackLog {
+  id        String   @id @default(cuid())
+  imageHash String
+  market    String
+  action    String // pin | unpin | reject | unreject | override | remove | select | deselect
+  value     String? // e.g. override score, comparison result
+  createdAt DateTime @default(now())
+
+  @@index([imageHash, market])
+}
+
+/// Optional outcome tracking — "did this headshot perform in submission?"
+/// Secondary, noisy signal; never the primary training target.
+model Outcome {
+  id        String   @id @default(cuid())
+  imageHash String
+  market    String
+  result    String // booked | audition | no_response
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([imageHash])
+}
+
+/// Consent record per anonymous session. Must be granted before any
+/// FeedbackLog / Outcome is written.
+model ConsentRecord {
+  id        String   @id @default(cuid())
+  sessionKey String  @unique
+  granted   Boolean
+  grantedAt DateTime?
+  createdAt DateTime @default(now())
 }

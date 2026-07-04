@@ -11,19 +11,95 @@ import { ShortlistPanel } from "@/components/shortlist-panel";
 import { GridToolbar } from "@/components/grid-toolbar";
 import { PortraitDetail } from "@/components/portrait-detail";
 import { EthicsFooter } from "@/components/ethics-footer";
+import { BatchProgressBar } from "@/components/batch-progress-bar";
+import { ConsentModal } from "@/components/consent-modal";
+import { CompareView } from "@/components/compare-view";
+import { UndoToast } from "@/components/undo-toast";
+import { HelpDialog } from "@/components/help-dialog";
+import { MobileShortlistSheet } from "@/components/mobile-shortlist-sheet";
 import { useHeadshotStore } from "@/store/headshot-store";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
-type SortKey = "score" | "name" | "recent";
+type SortKey =
+  | "score"
+  | "name"
+  | "recent"
+  | "eye_focus"
+  | "background"
+  | "expression"
+  | "believability";
 
 export default function Home() {
   const [sortKey, setSortKey] = React.useState<SortKey>("score");
   const [showRejected, setShowRejected] = React.useState(false);
 
   const portraits = useHeadshotStore((s) => s.portraits);
+  const selectPortrait = useHeadshotStore((s) => s.selectPortrait);
+  const togglePin = useHeadshotStore((s) => s.togglePin);
+  const toggleReject = useHeadshotStore((s) => s.toggleReject);
+  const evaluatePortrait = useHeadshotStore((s) => s.evaluatePortrait);
+  const setHelpOpen = useHeadshotStore((s) => s.setHelpOpen);
+  const checkConsent = useHeadshotStore((s) => s.checkConsent);
+
   const total = portraits.length;
   const shown = showRejected
     ? total
     : portraits.filter((p) => !p.rejected).length;
+
+  // Check consent status on mount ONLY if we have a persisted decision
+  // (returning session). First-time visitors (consentGranted === null) see
+  // the consent modal instead.
+  React.useEffect(() => {
+    const current = useHeadshotStore.getState().consentGranted;
+    if (current !== null) {
+      void checkConsent();
+    }
+  }, [checkConsent]);
+
+  // Keyboard navigation — select next/prev among non-rejected portraits.
+  const selectNext = React.useCallback(
+    (dir: 1 | -1) => {
+      const eligible = portraits.filter((p) => !p.rejected);
+      if (eligible.length === 0) return;
+      const currentId = useHeadshotStore.getState().selectedId;
+      const idx = eligible.findIndex((p) => p.id === currentId);
+      const nextIdx =
+        idx === -1
+          ? 0
+          : (idx + dir + eligible.length) % eligible.length;
+      selectPortrait(eligible[nextIdx].id);
+    },
+    [portraits, selectPortrait]
+  );
+
+  const selectedPortrait = portraits.find(
+    (p) => p.id === useHeadshotStore.getState().selectedId
+  );
+
+  useKeyboardShortcuts(
+    {
+      onNext: () => selectNext(1),
+      onPrev: () => selectNext(-1),
+      onOpenDetail: () => {
+        const id = useHeadshotStore.getState().selectedId;
+        if (id) selectPortrait(id);
+      },
+      onTogglePin: () => {
+        const id = useHeadshotStore.getState().selectedId;
+        if (id) togglePin(id);
+      },
+      onToggleReject: () => {
+        const id = useHeadshotStore.getState().selectedId;
+        if (id) toggleReject(id);
+      },
+      onRetry: () => {
+        const id = useHeadshotStore.getState().selectedId;
+        if (id) evaluatePortrait(id);
+      },
+      onToggleHelp: () => setHelpOpen(!useHeadshotStore.getState().helpOpen),
+    },
+    true
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -52,9 +128,16 @@ export default function Home() {
               <UploadZone />
             </div>
 
+            {/* Batch progress bar */}
+            {total > 0 && (
+              <div className="mt-5">
+                <BatchProgressBar />
+              </div>
+            )}
+
             {/* Grid + shortlist */}
             {total > 0 && (
-              <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]">
+              <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_320px]">
                 <div className="min-w-0">
                   <div className="mb-3">
                     <GridToolbar
@@ -71,7 +154,8 @@ export default function Home() {
                     showRejected={showRejected}
                   />
                 </div>
-                <div className="lg:sticky lg:top-20 lg:h-fit">
+                {/* Shortlist sidebar — desktop only. Mobile uses the floating sheet. */}
+                <div className="hidden lg:sticky lg:top-20 lg:block lg:h-fit">
                   <ShortlistPanel />
                 </div>
               </div>
@@ -81,7 +165,14 @@ export default function Home() {
       </main>
 
       <EthicsFooter />
+
+      {/* Overlays & modals */}
       <PortraitDetail />
+      <ConsentModal />
+      <CompareView />
+      <HelpDialog />
+      <UndoToast />
+      <MobileShortlistSheet />
     </div>
   );
 }

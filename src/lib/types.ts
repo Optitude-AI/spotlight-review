@@ -2,10 +2,6 @@
  * Shared evaluation contract — the durable output schema for the headshot
  * evaluator. Matches the design spec: three dimensions (technical,
  * aesthetic/market, casting), flags, narrative feedback, uncertainty.
- *
- * The API returns `HeadshotEvaluation`. Sub-scores are 0–1; the composite
- * overall_score is 0–100 and computed server-side so it stays tunable per
- * market.
  */
 
 export type MarketContext =
@@ -16,66 +12,78 @@ export type MarketContext =
   | "film_tv";
 
 export interface TechnicalScores {
-  exposure: number; // 0–1
-  eye_focus: number; // 0–1
-  noise: number; // 0–1 (1 = clean)
-  color_balance: number; // 0–1
-  dynamic_range: number; // 0–1
+  exposure: number;
+  eye_focus: number;
+  noise: number;
+  color_balance: number;
+  dynamic_range: number;
   flags: string[];
 }
 
 export interface AestheticMarketScores {
-  composition: number; // 0–1
-  background_cleanliness: number; // 0–1
-  expression_fit: number; // 0–1
-  wardrobe_fit: number; // 0–1
-  believability: number; // 0–1
+  composition: number;
+  background_cleanliness: number;
+  expression_fit: number;
+  wardrobe_fit: number;
+  believability: number;
   flags: string[];
 }
 
 export interface TypeLabel {
   label: string;
-  score: number; // 0–1
+  score: number;
 }
 
 export interface GenderPresentation {
-  label: string; // "femme" | "masc" | "androgynous" | "uncertain"
-  confidence: number; // 0–1
+  label: string;
+  confidence: number;
 }
 
 export interface CastingScores {
   apparent_age_range: [number, number];
   gender_presentation: GenderPresentation;
   type_labels: TypeLabel[];
-  expression_readability: number; // 0–1
+  expression_readability: number;
   expression_tags: string[];
 }
 
 export interface HeadshotEvaluation {
-  overall_score: number; // 0–100
-  overall_confidence: number; // 0–1
+  overall_score: number;
+  overall_confidence: number;
   technical: TechnicalScores;
   aesthetic_market: AestheticMarketScores;
   casting: CastingScores;
-  narrative: string[]; // short structured NL feedback sentences
+  narrative: string[];
   market_context: MarketContext;
   model_version: string;
   disclaimer: string;
+  /** True when this result was served from cache (no new API call). */
+  cached?: boolean;
 }
+
+export type PortraitStatus = "queued" | "evaluating" | "done" | "error";
+
+export type OutcomeResult = "booked" | "audition" | "no_response";
 
 /** Client-side portrait record: combines the uploaded image with its eval. */
 export interface Portrait {
   id: string;
   name: string;
-  dataUrl: string; // base64 or remote URL
+  dataUrl: string;
   source: "upload" | "sample";
-  status: "queued" | "evaluating" | "done" | "error";
+  status: PortraitStatus;
   evaluation?: HeadshotEvaluation;
   error?: string;
-  pinned: boolean; // user force-includes in shortlist
-  rejected: boolean; // user force-excludes
-  overrideScore?: number; // user override of overall score
+  pinned: boolean;
+  rejected: boolean;
+  overrideScore?: number;
   createdAt: number;
+  /** Image hash for cache keying + feedback logging. */
+  imageHash?: string;
+  /** Optional outcome tracking. */
+  outcome?: OutcomeResult;
+  /** Cached evaluations per market (for instant market switching). */
+  marketCache?: Partial<Record<MarketContext, HeadshotEvaluation>>;
 }
 
 export const MARKET_OPTIONS: {

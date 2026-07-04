@@ -1,6 +1,6 @@
 "use client";
 
-import { Pin, Ban, RotateCw, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { Pin, Ban, Trash2, RotateCw, AlertCircle, Loader2, Check, GitCompare } from "lucide-react";
 import { useHeadshotStore } from "@/store/headshot-store";
 import type { Portrait } from "@/lib/types";
 import { ScoreRing } from "@/components/score-ring";
@@ -14,27 +14,38 @@ interface PortraitCardProps {
   rank?: number;
 }
 
-export function PortraitCard({
-  portrait,
-  inShortlist,
-  rank,
-}: PortraitCardProps) {
+export function PortraitCard({ portrait, inShortlist, rank }: PortraitCardProps) {
   const selectPortrait = useHeadshotStore((s) => s.selectPortrait);
   const togglePin = useHeadshotStore((s) => s.togglePin);
   const toggleReject = useHeadshotStore((s) => s.toggleReject);
   const evaluatePortrait = useHeadshotStore((s) => s.evaluatePortrait);
   const removePortrait = useHeadshotStore((s) => s.removePortrait);
+  const selectMode = useHeadshotStore((s) => s.selectMode);
+  const selectedIds = useHeadshotStore((s) => s.selectedIds);
+  const toggleSelected = useHeadshotStore((s) => s.toggleSelected);
+  const compareIds = useHeadshotStore((s) => s.compareIds);
+  const addToCompare = useHeadshotStore((s) => s.addToCompare);
+  const removeFromCompare = useHeadshotStore((s) => s.removeFromCompare);
 
   const { evaluation, status } = portrait;
-  const displayScore =
-    portrait.overrideScore ?? evaluation?.overall_score ?? 0;
+  const displayScore = portrait.overrideScore ?? evaluation?.overall_score ?? 0;
   const style = scoreStyle(displayScore);
-
   const topType = evaluation?.casting.type_labels[0];
   const flags = [
     ...(evaluation?.technical.flags ?? []),
     ...(evaluation?.aesthetic_market.flags ?? []),
   ].slice(0, 3);
+
+  const isSelected = selectedIds.has(portrait.id);
+  const inCompare = compareIds.includes(portrait.id);
+
+  const handleCardClick = () => {
+    if (selectMode) {
+      toggleSelected(portrait.id);
+    } else {
+      selectPortrait(portrait.id);
+    }
+  };
 
   return (
     <div
@@ -45,7 +56,9 @@ export function PortraitCard({
           : portrait.pinned
             ? "border-spotlight ring-1 ring-spotlight/40"
             : "border-border",
-        inShortlist && !portrait.pinned && "ring-1 ring-emerald-500/30"
+        inShortlist && !portrait.pinned && "ring-1 ring-emerald-500/30",
+        selectMode && isSelected && "ring-2 ring-spotlight",
+        selectMode && "cursor-pointer"
       )}
     >
       {/* Rank ribbon for shortlist */}
@@ -55,14 +68,40 @@ export function PortraitCard({
         </div>
       )}
 
+      {/* Select-mode checkbox */}
+      {selectMode && (
+        <div
+          className={cn(
+            "absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-md border-2 transition-colors",
+            isSelected
+              ? "border-spotlight bg-spotlight text-spotlight-foreground"
+              : "border-background/80 bg-background/60"
+          )}
+        >
+          {isSelected && <Check className="h-4 w-4" />}
+        </div>
+      )}
+
+      {/* Compare badge */}
+      {inCompare && (
+        <div className="absolute left-2 top-2 z-20 flex h-6 items-center gap-1 rounded-md bg-violet-500/90 px-1.5 text-[9px] font-medium text-white">
+          <GitCompare className="h-3 w-3" />
+          Compare
+        </div>
+      )}
+
       {/* Image */}
       <button
         type="button"
-        onClick={() => selectPortrait(portrait.id)}
+        onClick={handleCardClick}
         className="relative block aspect-[3/4] w-full overflow-hidden bg-muted"
-        aria-label={`View details for ${portrait.name}`}
+        aria-label={
+          selectMode
+            ? `Select ${portrait.name}`
+            : `View details for ${portrait.name}`
+        }
       >
-        {/* next/no-img-element rule is not enabled in this config */}
+        {/* portrait preview */}
         <img
           src={portrait.dataUrl}
           alt={portrait.name}
@@ -73,7 +112,7 @@ export function PortraitCard({
           loading="lazy"
         />
         {portrait.source === "sample" && (
-          <span className="absolute left-2 top-2 z-10 rounded bg-background/80 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground backdrop-blur">
+          <span className="absolute left-2 bottom-2 z-10 rounded bg-background/80 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground backdrop-blur">
             Sample
           </span>
         )}
@@ -97,7 +136,7 @@ export function PortraitCard({
         {status === "error" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-rose-500/10 p-3 text-center backdrop-blur-sm">
             <AlertCircle className="h-6 w-6 text-rose-500" />
-            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400 line-clamp-2">
               {portrait.error ?? "Evaluation failed"}
             </span>
             <button
@@ -115,7 +154,7 @@ export function PortraitCard({
         )}
 
         {/* Score ring top-right when done */}
-        {status === "done" && evaluation && (
+        {status === "done" && evaluation && !selectMode && (
           <div className="absolute right-2 top-2 z-10 rounded-full bg-background/85 p-0.5 backdrop-blur">
             <ScoreRing score={displayScore} size={48} strokeWidth={4} />
           </div>
@@ -149,6 +188,11 @@ export function PortraitCard({
                   {evaluation.casting.apparent_age_range[0]}–
                   {evaluation.casting.apparent_age_range[1]}
                 </span>
+                {portrait.outcome && (
+                  <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-600 dark:text-emerald-400">
+                    {portrait.outcome === "booked" ? "✓ Booked" : portrait.outcome === "audition" ? "Audition" : "No resp."}
+                  </span>
+                )}
               </div>
             )}
             {flags.length > 0 && (
@@ -168,50 +212,89 @@ export function PortraitCard({
                 score overridden
               </span>
             )}
+            {evaluation.cached && (
+              <span className="text-[9px] italic text-muted-foreground/70">
+                cached
+              </span>
+            )}
           </div>
         )}
 
-        {/* Action row */}
-        <div className="mt-2 flex items-center gap-1 border-t border-border/60 pt-2">
-          <button
-            type="button"
+        {/* Action row — enlarged tap targets (44px) */}
+        <div className="mt-2 flex items-center gap-0.5 border-t border-border/60 pt-1.5">
+          <ActionBtn
             onClick={() => togglePin(portrait.id)}
-            className={cn(
-              "inline-flex h-6 w-6 items-center justify-center rounded transition-colors",
-              portrait.pinned
-                ? "bg-spotlight/15 text-spotlight"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
+            active={portrait.pinned}
             title={portrait.pinned ? "Unpin" : "Pin to shortlist"}
-            aria-label={portrait.pinned ? "Unpin" : "Pin to shortlist"}
           >
-            <Pin className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
+            <Pin className="h-4 w-4" />
+          </ActionBtn>
+          <ActionBtn
             onClick={() => toggleReject(portrait.id)}
-            className={cn(
-              "inline-flex h-6 w-6 items-center justify-center rounded transition-colors",
-              portrait.rejected
-                ? "bg-rose-500/15 text-rose-500"
-                : "text-muted-foreground hover:bg-muted hover:text-rose-500"
-            )}
+            active={portrait.rejected}
+            activeClass="bg-rose-500/15 text-rose-500"
             title={portrait.rejected ? "Un-reject" : "Reject"}
-            aria-label={portrait.rejected ? "Un-reject" : "Reject"}
           >
-            <Ban className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
+            <Ban className="h-4 w-4" />
+          </ActionBtn>
+          <ActionBtn
+            onClick={() =>
+              inCompare ? removeFromCompare(portrait.id) : addToCompare(portrait.id)
+            }
+            active={inCompare}
+            activeClass="bg-violet-500/15 text-violet-500"
+            title={inCompare ? "Remove from compare" : "Add to compare"}
+            disabled={!inCompare && compareIds.length >= 4}
+          >
+            <GitCompare className="h-4 w-4" />
+          </ActionBtn>
+          <ActionBtn
             onClick={() => removePortrait(portrait.id)}
-            className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             title="Remove"
-            aria-label="Remove"
+            className="ml-auto"
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+            <Trash2 className="h-4 w-4" />
+          </ActionBtn>
         </div>
       </div>
     </div>
+  );
+}
+
+/** 44px touch-target button — meets mobile accessibility guidelines. */
+function ActionBtn({
+  children,
+  onClick,
+  active,
+  title,
+  className,
+  activeClass,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  active?: boolean;
+  title: string;
+  className?: string;
+  activeClass?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-md transition-colors disabled:opacity-30",
+        active
+          ? activeClass ?? "bg-spotlight/15 text-spotlight"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        className
+      )}
+    >
+      {children}
+    </button>
   );
 }

@@ -8,6 +8,7 @@ import {
   type RawEvaluation,
 } from "@/lib/evaluator-prompt";
 import type { HeadshotEvaluation, MarketContext } from "@/lib/types";
+import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -20,23 +21,36 @@ const VALID_MARKETS: MarketContext[] = [
   "film_tv",
 ];
 
-/**
- * Extract a JSON object from a model response that may include stray prose
- * or markdown fences. Finds the first balanced `{...}` block.
- */
+/** Fast non-crypto hash of the image payload for cache keying (server side). */
+function serverHash(input: string): string {
+  // Use the first 1MB + last 256 bytes + length to avoid hashing huge strings fully.
+  const head = input.slice(0, 1_000_000);
+  const tail = input.slice(-256);
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  const combined = `${head.length}:${head}|${tail}|${input.length}`;
+  for (let i = 0; i < combined.length; i++) {
+    const ch = combined.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  return (
+    (h2 >>> 0).toString(16).padStart(8, "0") +
+    (h1 >>> 0).toString(16).padStart(8, "0")
+  );
+}
+
 function extractJson(text: string): unknown {
   if (!text) throw new Error("Empty model response");
-  // Strip markdown code fences if present.
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fenced ? fenced[1] : text;
-
-  // Try direct parse first.
   try {
     return JSON.parse(candidate.trim());
   } catch {
-    // fall through to balanced-brace extraction
+    // fall through
   }
-
   const start = candidate.indexOf("{");
   if (start === -1) throw new Error("No JSON object found in response");
   let depth = 0;
@@ -54,8 +68,7 @@ function extractJson(text: string): unknown {
       else if (ch === "}") {
         depth--;
         if (depth === 0) {
-          const slice = candidate.slice(start, i + 1);
-          return JSON.parse(slice);
+          return JSON.parse(candidate.slice(start, i + 1));
         }
       }
     }
@@ -130,7 +143,7 @@ function coerceRaw(obj: unknown): RawEvaluation {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { image?: string; market?: string };
+  let body: { image?: string; market?: string; imageHash?: string };
   try {
     body = await req.json();
   } catch {
@@ -153,6 +166,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Cache lookup: use client-provided hash if present, else compute one.
+  const imageHash = body.imageHash || serverHash(image);
+  try {
+    const cached = await db.evaluationCache.findUnique({
+      where: { imageHash_market: { imageHash, market } },
+    });
+    if (cached) {
+      const evaluation = JSON.parse(cached.result) as HeadshotEvaluation;
+      evaluation.cached = true;
+      return NextResponse.json({ evaluation, imageHash });
+    }
+  } catch {
+    // DB not critical; continue to live evaluation.
+  }
+
   try {
     const zai = await ZAI.create();
     const prompt = buildEvaluatorPrompt(market);
@@ -167,8 +195,6 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    // Retry on rate-limit (429) with backoff. The vision API is strict about
-    // concurrency, so we back off and retry once before giving up.
     let response;
     let lastError: unknown = null;
     const attempts = 3;
@@ -185,11 +211,13 @@ export async function POST(req: NextRequest) {
           attemptErr instanceof Error ? attemptErr.message : String(attemptErr);
         const is429 = msg.includes("429") || msg.includes("Too many requests");
         if (!is429 || attempt === attempts - 1) throw attemptErr;
-        // backoff: 4s, then 9s
         await new Promise((r) => setTimeout(r, 4000 + attempt * 5000));
       }
     }
-    if (!response) throw lastError instanceof Error ? lastError : new Error("Vision request failed");
+    if (!response)
+      throw lastError instanceof Error
+        ? lastError
+        : new Error("Vision request failed");
 
     const content = response.choices[0]?.message?.content ?? "";
 
@@ -242,13 +270,27 @@ export async function POST(req: NextRequest) {
         ? raw.narrative
         : raw.narrative.length > 0
           ? raw.narrative
-          : ["No specific notes — the image reads as a competent headshot for this market."],
+          : [
+              "No specific notes — the image reads as a competent headshot for this market.",
+            ],
       market_context: market,
       model_version: MODEL_VERSION,
       disclaimer: DISCLAIMER,
+      cached: false,
     };
 
-    return NextResponse.json({ evaluation });
+    // Persist to cache (best-effort).
+    try {
+      await db.evaluationCache.upsert({
+        where: { imageHash_market: { imageHash, market } },
+        create: { imageHash, market, result: JSON.stringify(evaluation) },
+        update: { result: JSON.stringify(evaluation), updatedAt: new Date() },
+      });
+    } catch {
+      // non-critical
+    }
+
+    return NextResponse.json({ evaluation, imageHash });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Unknown evaluation error";

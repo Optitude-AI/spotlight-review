@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHeadshotStore } from "@/store/headshot-store";
 import { ScoreRing } from "@/components/score-ring";
 import { DimensionRadar } from "@/components/dimension-radar";
@@ -22,6 +23,8 @@ import {
   confidenceLabel,
   scoreStyle,
 } from "@/lib/scoring";
+import { generateTemplateFeedback } from "@/lib/template-feedback";
+import { explainCompositeScore } from "@/lib/score-explainer";
 import {
   Pin,
   Ban,
@@ -30,27 +33,42 @@ import {
   Clapperboard,
   Wand2,
   ShieldAlert,
+  CheckCircle2,
+  AlertTriangle,
+  Lightbulb,
+  Trophy,
+  X,
+  GitCompare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { OutcomeResult } from "@/lib/types";
 
 export function PortraitDetail() {
   const open = useHeadshotStore((s) => s.detailOpen);
   const setOpen = useHeadshotStore((s) => s.setDetailOpen);
-  const selectedId = useHeadshotStore((s) => s.selectedId);
   const portrait = useHeadshotStore((s) =>
     s.selectedId ? s.portraits.find((p) => p.id === s.selectedId) : undefined
   );
   const togglePin = useHeadshotStore((s) => s.togglePin);
   const toggleReject = useHeadshotStore((s) => s.toggleReject);
   const setOverrideScore = useHeadshotStore((s) => s.setOverrideScore);
+  const setOutcome = useHeadshotStore((s) => s.setOutcome);
+  const compareIds = useHeadshotStore((s) => s.compareIds);
+  const addToCompare = useHeadshotStore((s) => s.addToCompare);
+  const removeFromCompare = useHeadshotStore((s) => s.removeFromCompare);
+  const setCompareOpen = useHeadshotStore((s) => s.setCompareOpen);
 
   const [overrideActive, setOverrideActive] = React.useState(false);
   const [overrideVal, setOverrideVal] = React.useState(50);
+  const [tab, setTab] = React.useState("overview");
 
   React.useEffect(() => {
     if (portrait) {
       setOverrideActive(portrait.overrideScore != null);
-      setOverrideVal(portrait.overrideScore ?? portrait.evaluation?.overall_score ?? 50);
+      setOverrideVal(
+        portrait.overrideScore ?? portrait.evaluation?.overall_score ?? 50
+      );
+      setTab("overview");
     }
   }, [portrait?.id, portrait?.overrideScore, portrait?.evaluation?.overall_score]);
 
@@ -59,6 +77,10 @@ export function PortraitDetail() {
   const e = portrait.evaluation;
   const displayScore = portrait.overrideScore ?? e?.overall_score ?? 0;
   const style = scoreStyle(displayScore);
+  const inCompare = compareIds.includes(portrait.id);
+
+  const templateFeedback = e ? generateTemplateFeedback(e) : [];
+  const breakdown = e ? explainCompositeScore(e) : null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -71,6 +93,19 @@ export function PortraitDetail() {
                 Sample
               </Badge>
             )}
+            {e?.cached && (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                cached
+              </Badge>
+            )}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="ml-auto rounded-md p-1 text-muted-foreground hover:bg-muted"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </DialogTitle>
         </DialogHeader>
 
@@ -146,6 +181,25 @@ export function PortraitDetail() {
                 </Button>
               </div>
 
+              {/* Compare */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 w-full"
+                onClick={() => {
+                  if (inCompare) {
+                    removeFromCompare(portrait.id);
+                  } else {
+                    addToCompare(portrait.id);
+                    if (compareIds.length >= 1) setCompareOpen(true);
+                  }
+                }}
+                disabled={!inCompare && compareIds.length >= 4}
+              >
+                <GitCompare className="mr-1.5 h-3.5 w-3.5" />
+                {inCompare ? "Remove from compare" : "Add to compare"}
+              </Button>
+
               {/* Override */}
               <div className="mt-3 rounded-lg border border-border/60 p-3">
                 <div className="flex items-center justify-between">
@@ -178,9 +232,7 @@ export function PortraitDetail() {
                     size="sm"
                     variant="outline"
                     className="h-7 flex-1 text-xs"
-                    onClick={() => {
-                      setOverrideScore(portrait.id, overrideVal);
-                    }}
+                    onClick={() => setOverrideScore(portrait.id, overrideVal)}
                     disabled={!overrideActive}
                   >
                     Save override
@@ -200,6 +252,41 @@ export function PortraitDetail() {
                 </div>
               </div>
 
+              {/* Outcome tracking */}
+              <div className="mt-3 rounded-lg border border-border/60 p-3">
+                <label className="text-xs font-medium">Submission outcome</label>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  Optional — helps correlate headshots with results.
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      ["booked", "Booked"],
+                      ["audition", "Audition"],
+                      ["no_response", "No resp."],
+                    ] as [OutcomeResult, string][]
+                  ).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setOutcome(portrait.id, val)}
+                      className={cn(
+                        "rounded-md border px-2 py-1.5 text-[11px] font-medium transition-colors",
+                        portrait.outcome === val
+                          ? val === "booked"
+                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : val === "audition"
+                              ? "border-spotlight bg-spotlight/10 text-spotlight"
+                              : "border-muted-foreground bg-muted text-muted-foreground"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
                 {e.disclaimer}
               </p>
@@ -208,155 +295,284 @@ export function PortraitDetail() {
               </p>
             </div>
 
-            {/* Right: breakdown */}
+            {/* Right: breakdown (tabbed on mobile, single column on desktop) */}
             <div className="p-5">
-              {/* Headline score + radar */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col items-center justify-center rounded-lg border border-border/60 bg-muted/20 p-4">
-                  <ScoreRing
-                    score={displayScore}
-                    size={120}
-                    strokeWidth={9}
-                    confidence={e.overall_confidence}
-                    showLabel
-                  />
-                  <Badge
-                    variant="outline"
-                    className={cn("mt-2", style.badgeClass)}
-                  >
-                    {style.label}
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Dimension radar
-                  </h4>
-                  <DimensionRadar evaluation={e} />
-                </div>
-              </div>
+              {/* Use tabs always — works on both mobile and desktop and solves
+                  the long-scroll problem on mobile. */}
+              <Tabs value={tab} onValueChange={setTab}>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
+                  <TabsTrigger value="overview" className="text-xs">
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger value="technical" className="text-xs">
+                    Technical
+                  </TabsTrigger>
+                  <TabsTrigger value="aesthetic" className="text-xs">
+                    Aesthetic
+                  </TabsTrigger>
+                  <TabsTrigger value="casting" className="text-xs">
+                    Casting
+                  </TabsTrigger>
+                  <TabsTrigger value="feedback" className="text-xs">
+                    <span className="hidden sm:inline">Feedback</span>
+                    <span className="sm:hidden">Notes</span>
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Three dimensions */}
-              <div className="mt-5 space-y-4">
-                <DimensionBlock
-                  icon={<Camera className="h-4 w-4 text-spotlight" />}
-                  title="Technical quality"
-                  items={[
-                    { label: "Exposure", value: e.technical.exposure },
-                    { label: "Eye focus", value: e.technical.eye_focus },
-                    { label: "Low noise", value: e.technical.noise },
-                    {
-                      label: "Color balance",
-                      value: e.technical.color_balance,
-                    },
-                    {
-                      label: "Dynamic range",
-                      value: e.technical.dynamic_range,
-                    },
-                  ]}
-                  flags={e.technical.flags}
-                />
-
-                <DimensionBlock
-                  icon={<Palette className="h-4 w-4 text-spotlight" />}
-                  title="Aesthetic & market fit"
-                  items={[
-                    { label: "Composition", value: e.aesthetic_market.composition },
-                    {
-                      label: "Background cleanliness",
-                      value: e.aesthetic_market.background_cleanliness,
-                    },
-                    {
-                      label: "Expression fit",
-                      value: e.aesthetic_market.expression_fit,
-                    },
-                    { label: "Wardrobe fit", value: e.aesthetic_market.wardrobe_fit },
-                    {
-                      label: "Believability",
-                      value: e.aesthetic_market.believability,
-                    },
-                  ]}
-                  flags={e.aesthetic_market.flags}
-                />
-
-                {/* Casting block */}
-                <div className="rounded-lg border border-border/60 p-4">
-                  <div className="flex items-center gap-2">
-                    <Clapperboard className="h-4 w-4 text-spotlight" />
-                    <h4 className="text-sm font-semibold">Casting attributes</h4>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <CastingField label="Apparent age">
-                      <span className="text-sm font-medium">
-                        {e.casting.apparent_age_range[0]}–
-                        {e.casting.apparent_age_range[1]}
-                      </span>
-                    </CastingField>
-                    <CastingField label="Gender presentation">
-                      <span className="text-sm font-medium capitalize">
-                        {e.casting.gender_presentation.label}
-                      </span>
-                      <span className="ml-1.5 text-xs text-muted-foreground">
-                        ({Math.round(e.casting.gender_presentation.confidence * 100)}% conf.)
-                      </span>
-                    </CastingField>
-                    <CastingField label="Expression readability">
-                      <span className="text-sm font-medium tabular-nums">
-                        {Math.round(e.casting.expression_readability * 100)}/100
-                      </span>
-                    </CastingField>
-                    <CastingField label="Expression tags">
-                      <div className="flex flex-wrap gap-1">
-                        {e.casting.expression_tags.length > 0 ? (
-                          e.casting.expression_tags.map((t) => (
-                            <span
-                              key={t}
-                              className="rounded bg-muted px-1.5 py-0.5 text-[10px] capitalize text-muted-foreground"
-                            >
-                              {t}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </div>
-                    </CastingField>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Type labels
-                    </p>
-                    <div className="mt-1.5 space-y-1.5">
-                      {e.casting.type_labels.map((t) => (
-                        <div
-                          key={t.label}
-                          className="flex items-center gap-2"
-                        >
-                          <span className="w-28 shrink-0 text-xs">
-                            {humanizeType(t.label)}
-                          </span>
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-spotlight"
-                              style={{ width: `${t.score * 100}%` }}
-                            />
-                          </div>
-                          <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
-                            {Math.round(t.score * 100)}
-                          </span>
-                        </div>
-                      ))}
+                {/* Overview tab */}
+                <TabsContent value="overview" className="mt-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-border/60 bg-muted/20 p-4">
+                      <ScoreRing
+                        score={displayScore}
+                        size={120}
+                        strokeWidth={9}
+                        confidence={e.overall_confidence}
+                        showLabel
+                      />
+                      <Badge
+                        variant="outline"
+                        className={cn("mt-2", style.badgeClass)}
+                      >
+                        {style.label}
+                      </Badge>
+                    </div>
+                    <div>
+                      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Dimension radar
+                      </h4>
+                      <DimensionRadar evaluation={e} />
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Narrative */}
-              <div className="mt-5">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Structured feedback
-                </h4>
-                <FeedbackList narrative={e.narrative} />
-              </div>
+                  {/* Composite score explainer */}
+                  {breakdown && (
+                    <div className="mt-4 rounded-lg border border-border/60 p-4">
+                      <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <Trophy className="h-3.5 w-3.5 text-spotlight" />
+                        How this score was computed
+                      </h4>
+                      <div className="mt-2 space-y-1.5">
+                        {breakdown.lines.map((line) => (
+                          <div
+                            key={line.label}
+                            className="flex items-center justify-between text-xs"
+                          >
+                            <span className="text-muted-foreground">
+                              {line.label}{" "}
+                              <span className="text-muted-foreground/60">
+                                ({line.detail})
+                              </span>
+                            </span>
+                            <span className="font-medium tabular-nums">
+                              +{line.contribution}
+                            </span>
+                          </div>
+                        ))}
+                        {breakdown.flagPenalty > 0 && (
+                          <div className="flex items-center justify-between text-xs text-rose-500">
+                            <span>Flag penalty</span>
+                            <span className="font-medium tabular-nums">
+                              −{breakdown.flagPenalty}
+                            </span>
+                          </div>
+                        )}
+                        <div className="mt-1.5 flex items-center justify-between border-t border-border/60 pt-1.5 text-sm font-bold">
+                          <span>Final score</span>
+                          <span className={style.textClass}>
+                            {breakdown.finalScore}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Technical tab */}
+                <TabsContent value="technical" className="mt-4">
+                  <DimensionBlock
+                    icon={<Camera className="h-4 w-4 text-spotlight" />}
+                    title="Technical quality"
+                    items={[
+                      { label: "Exposure", value: e.technical.exposure },
+                      { label: "Eye focus", value: e.technical.eye_focus },
+                      { label: "Low noise", value: e.technical.noise },
+                      {
+                        label: "Color balance",
+                        value: e.technical.color_balance,
+                      },
+                      {
+                        label: "Dynamic range",
+                        value: e.technical.dynamic_range,
+                      },
+                    ]}
+                    flags={e.technical.flags}
+                  />
+                </TabsContent>
+
+                {/* Aesthetic tab */}
+                <TabsContent value="aesthetic" className="mt-4">
+                  <DimensionBlock
+                    icon={<Palette className="h-4 w-4 text-spotlight" />}
+                    title="Aesthetic & market fit"
+                    items={[
+                      { label: "Composition", value: e.aesthetic_market.composition },
+                      {
+                        label: "Background cleanliness",
+                        value: e.aesthetic_market.background_cleanliness,
+                      },
+                      {
+                        label: "Expression fit",
+                        value: e.aesthetic_market.expression_fit,
+                      },
+                      { label: "Wardrobe fit", value: e.aesthetic_market.wardrobe_fit },
+                      {
+                        label: "Believability",
+                        value: e.aesthetic_market.believability,
+                      },
+                    ]}
+                    flags={e.aesthetic_market.flags}
+                  />
+                </TabsContent>
+
+                {/* Casting tab */}
+                <TabsContent value="casting" className="mt-4">
+                  <div className="rounded-lg border border-border/60 p-4">
+                    <div className="flex items-center gap-2">
+                      <Clapperboard className="h-4 w-4 text-spotlight" />
+                      <h4 className="text-sm font-semibold">
+                        Casting attributes
+                      </h4>
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <CastingField label="Apparent age">
+                        <span className="text-sm font-medium">
+                          {e.casting.apparent_age_range[0]}–
+                          {e.casting.apparent_age_range[1]}
+                        </span>
+                      </CastingField>
+                      <CastingField label="Gender presentation">
+                        <span className="text-sm font-medium capitalize">
+                          {e.casting.gender_presentation.label}
+                        </span>
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          (
+                          {Math.round(
+                            e.casting.gender_presentation.confidence * 100
+                          )}
+                          % conf.)
+                        </span>
+                      </CastingField>
+                      <CastingField label="Expression readability">
+                        <span className="text-sm font-medium tabular-nums">
+                          {Math.round(e.casting.expression_readability * 100)}
+                          /100
+                        </span>
+                      </CastingField>
+                      <CastingField label="Expression tags">
+                        <div className="flex flex-wrap gap-1">
+                          {e.casting.expression_tags.length > 0 ? (
+                            e.casting.expression_tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded bg-muted px-1.5 py-0.5 text-[10px] capitalize text-muted-foreground"
+                              >
+                                {t}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
+                        </div>
+                      </CastingField>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        Type labels
+                      </p>
+                      <div className="mt-1.5 space-y-1.5">
+                        {e.casting.type_labels.map((t) => (
+                          <div key={t.label} className="flex items-center gap-2">
+                            <span className="w-28 shrink-0 text-xs">
+                              {humanizeType(t.label)}
+                            </span>
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-spotlight"
+                                style={{ width: `${t.score * 100}%` }}
+                              />
+                            </div>
+                            <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
+                              {Math.round(t.score * 100)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Feedback tab — template-grounded + model notes */}
+                <TabsContent value="feedback" className="mt-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        Structured observations
+                      </h4>
+                      <p className="mb-2 text-[11px] text-muted-foreground">
+                        Deterministic, auditable feedback generated from the
+                        structured scores and flags.
+                      </p>
+                      <div className="space-y-2">
+                        {templateFeedback.length === 0 ? (
+                          <p className="text-sm italic text-muted-foreground">
+                            No flagged issues — the image reads cleanly across
+                            all dimensions.
+                          </p>
+                        ) : (
+                          templateFeedback.map((item, i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "flex gap-2.5 rounded-lg border p-3 text-sm leading-relaxed",
+                                item.category === "strength"
+                                  ? "border-emerald-500/20 bg-emerald-500/5"
+                                  : item.category === "issue"
+                                    ? "border-rose-500/20 bg-rose-500/5"
+                                    : "border-border bg-muted/30"
+                              )}
+                            >
+                              {item.category === "strength" ? (
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                              ) : item.category === "issue" ? (
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
+                              ) : (
+                                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-spotlight" />
+                              )}
+                              <span>{item.text}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <Lightbulb className="h-3.5 w-3.5 text-spotlight" />
+                        Model notes
+                      </h4>
+                      <p className="mb-2 text-[11px] text-muted-foreground">
+                        Free-form observations from the vision model —
+                        supplementary to the structured observations above.
+                      </p>
+                      <FeedbackList narrative={e.narrative} />
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         )}
