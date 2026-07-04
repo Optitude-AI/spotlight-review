@@ -2,52 +2,47 @@
 # Deploy Spotlight Review to Vercel.
 #
 # Usage:
-#   VERCEL_TOKEN=<your-vercel-token> bash deploy-to-vercel.sh
+#   VERCEL_TOKEN=<token> GEMINI_API_KEY=<key> bash deploy-to-vercel.sh
 #
-# Get a token at: https://vercel.com/account/tokens
+# Get tokens:
+#   VERCEL_TOKEN  — https://vercel.com/account/tokens
+#   GEMINI_API_KEY — https://aistudio.google.com/apikey  (FREE, 1500 req/day)
 #
 set -euo pipefail
 cd "$(dirname "$0")"
 
-: "${VERCEL_TOKEN:?VERCEL_TOKEN env var is required (create one at https://vercel.com/account/tokens)}"
+: "${VERCEL_TOKEN:?VERCEL_TOKEN env var is required (https://vercel.com/account/tokens)}"
+: "${GEMINI_API_KEY:?GEMINI_API_KEY env var is required (https://aistudio.google.com/apikey — FREE)}"
 
 echo "→ Installing Vercel CLI…"
-npm install -g vercel 2>/dev/null || npx vercel --version
+npm install -g vercel 2>/dev/null || true
 
-echo "→ Creating/linking Vercel project…"
-# This creates a new project if one doesn't exist, or links if it does.
+echo "→ Linking project (creates if new)…"
 vercel link --yes --token "$VERCEL_TOKEN" 2>&1 || true
 
 echo "→ Setting environment variables…"
 set_env() {
   local name="$1"
   local value="$2"
-  local target="${3:-production}"
-  # Remove existing (ignore error if not found), then add.
-  vercel env rm "$name" "$target" --yes --token "$VERCEL_TOKEN" 2>/dev/null || true
-  echo -n "$value" | vercel env add "$name" "$target" --token "$VERCEL_TOKEN" 2>/dev/null
+  vercel env rm "$name" production --yes --token "$VERCEL_TOKEN" 2>/dev/null || true
+  vercel env rm "$name" preview --yes --token "$VERCEL_TOKEN" 2>/dev/null || true
+  printf "%s" "$value" | vercel env add "$name" production --token "$VERCEL_TOKEN" 2>/dev/null
+  printf "%s" "$value" | vercel env add "$name" preview --token "$VERCEL_TOKEN" 2>/dev/null
   echo "  ✓ $name"
 }
 
-# ZAI SDK credentials (read from /etc/.z-ai-config in the sandbox)
-set_env "ZAI_BASE_URL" "https://internal-api.z.ai/v1"
-set_env "ZAI_API_KEY" "Z.ai"
-set_env "ZAI_CHAT_ID" "chat-7a30de38-2dbe-4cc6-b7c8-61dd28b65e32"
-set_env "ZAI_USER_ID" "966679fd-efe9-4e6b-bd3e-c0ed4238df67"
-set_env "ZAI_TOKEN" "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTY2Njc5ZmQtZWZlOS00ZTZiLWJkM2UtYzBlZDQyMzhkZjY3IiwiY2hhdF9pZCI6ImNoYXQtN2EzMGRlMzgtMmRiZS00Y2M2LWI3YzgtNjFkZDI4YjY1ZTMyIiwicGxhdGZvcm0iOiJ6YWkifQ.t-iCKImg3tB-39LLH-kzc-oN9ixDLPSSFpJiIc_oKck"
+# Use Gemini (free, public API) — not ZAI (internal-only, unreachable from Vercel)
+set_env "VISION_PROVIDER" "gemini"
+set_env "GEMINI_API_KEY" "$GEMINI_API_KEY"
 
-# Database — use /tmp (writable on Vercel serverless, but ephemeral).
-# The app gracefully handles DB failures; caching/logging won't persist
-# across invocations but the app functions.
+# Database — ephemeral on Vercel serverless, but app handles failures gracefully
 set_env "DATABASE_URL" "file:/tmp/custom.db"
 
 echo "→ Deploying to production…"
-vercel deploy --prod --yes --token "$VERCEL_TOKEN"
-
+DEPLOY_URL=$(vercel deploy --prod --yes --token "$VERCEL_TOKEN" 2>&1 | grep -oE 'https://[a-z0-9.-]+\.vercel\.app' | head -1)
 echo ""
-echo "✓ Deployed. Check the URL above."
+echo "✓ Deployed to: ${DEPLOY_URL:-<check output above>}"
 echo ""
-echo "Note: SQLite is ephemeral on Vercel serverless — server-side caching"
-echo "and feedback logging won't persist across invocations. The app still"
-echo "functions (evaluations work, client-side caching works)."
-echo "For persistent storage, consider Turso (libSQL) or Vercel Postgres."
+echo "The app uses Google Gemini (free tier, 1500 evals/day) for vision."
+echo "SQLite is ephemeral on Vercel — client-side caching still works,"
+echo "server-side cache/feedback logging won't persist across invocations."
